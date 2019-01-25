@@ -7,10 +7,11 @@ class BaseMultinomialNaiveBayes(ABC):
     """
     """
 
-    def __init__(selfi, priors=None):
+    def __init__(self, alphabet= "ACGT", priors=None):
         self.priors = priors
+        self.alphabet = alphabet
 
-    def _initial_fit(self, sequences, main_k, ):
+    def _initial_fit(self, sequences, main_k):
         """
         """
         
@@ -18,21 +19,23 @@ class BaseMultinomialNaiveBayes(ABC):
         # ordered list of target labels
         targets = np.asarray(sequences.targets)
         self.classes_ = np.unique(targets)
-        n_classes = len(self.classes_)
-        
+        self.n_classes = len(self.classes_)
+        self.v_size = np.power(len(self.alphabet), self.main_k)
+
         # Compute class priors
         # Calcul des probabilites a priori pour chaque classe
         # P(y_i) = #{y_i} / #{y}
 
-        self.class_counts_ = np.zeros(n_classes)
-        for ind in range(n_classes):
+        self.class_counts_ = np.zeros(self.n_classes)
+
+        for ind in range(self.n_classes):
             self.class_counts_[ind] = len(targets[targets==self.classes_[ind]])
  
         if self.priors == "uniform":
-            self.class_priors_ = np.full(n_classes, 1/n_classes)
+            self.class_priors_ = np.full(self.n_classes, 1/self.n_classes)
 
         elif self.priors == "ones":
-            self.class_priors_ = np.full(n_classes, 1)
+            self.class_priors_ = np.full(self.n_classes, 1)
 
         elif self.priors is not None:
             self.class_priors_ = self.priors
@@ -41,22 +44,22 @@ class BaseMultinomialNaiveBayes(ABC):
             self.class_priors_ = self.class_counts_ / self.class_counts_.sum()
 
         # compute kmers
-        self.main_kmer = kmers.KmersCollection(sequences, n=self.main_k, alphabet="ACGT")
-        #self.secd_kmer = kmers.KmersCollection(sequences, n=secd_k, alphabet="ACGT")
+        self.main_kmer = kmers.FullKmersCollection(sequences, k=self.main_k, alphabet=self.alphabet)
+        #self.secd_kmer = kmers.FullKmersCollection(sequences, k=secd_k, alphabet="ACGT")
 
         # compute y per target value
-        self.y = np.zeros((n_classes, len(self.main_kmer.kmers_list))) 
+        self.y = np.zeros((self.n_classes, self.v_size)) 
 
-        for ind in range(n_classes):
+        for ind in range(self.n_classes):
             X_class = self.main_kmer.data[targets == self.classes_[ind]]
             # sum word by word
             self.y[ind, :] = np.sum(X_class, axis=0)
 
         # compute the sum of ys
-        self.Y = np.zeros(n_classes)
+        self.Y = np.zeros(self.n_classes)
 
-        for ind in range(n_classes):
-            self.Y[ind] = np.sum(self.y[ind, axis=0])
+        for ind in range(self.n_classes):
+            self.Y[ind] = np.sum(self.y[ind])
 
         return self
 
@@ -150,10 +153,10 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
     """
  
     def fit(self, sequences, main_k, secd_k):
-        self._initial_fit(self, sequences, main_k, secd_k)
+        self._initial_fit(sequences, main_k)
         self.prob_kmers = np.zeros(self.y.shape)
 
-        for ind in range(n_classes):
+        for ind in range(self.n_classes):
             self.prob_kmers[ind] = np.divide(self.y[ind], self.Y[ind]) 
 
         return self
@@ -171,8 +174,7 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
         """
         log_joint_prob_density = []
 
-        seqs_kmer = kmers.KmersCollection(sequence, n=self.main_k, alphabet="ACGT")
-
+        seqs_kmer = kmers.FullKmersCollection(sequences, k=self.main_k, alphabet=self.alphabet)
         #
         for i in range(np.size(self.classes_)):
             # compute the log prob of class prior i

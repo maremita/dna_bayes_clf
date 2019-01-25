@@ -3,60 +3,56 @@ import numpy as np
 import re
 
 
-__all__ = ['Kmers', 'KmersCollection']
+__all__ = ['FullKmersCollection', 'get_kmer_index']
 
 
-class Kmers(defaultdict):
+def get_kmer_index(kmer, k):
     """
+    Function adapted from module enrich.pyx of
+    GenomeClassifier package [Sandberg et al. (2001)]
     """
 
-    def __init__(self, seq, n=1, unit_size=1, alphabet="ACGT"):
-        super().__init__(int)
-        self.n = n
-        self.unit_size = unit_size
-        self.mer_size = self.n * self.unit_size
-        self.alphabet = alphabet
-        self.compute_kmers(seq)
+    f=1
+    s=0
+    alpha_to_code = {'A':0, 'C':1, 'G':2, 'T':3}
 
-    def compute_kmers(self, sequence):
-        search = re.compile("^["+self.alphabet+"]+$").search
+    for i in range(0, k):
+        alpha_code=alpha_to_code[kmer[i]]
+        s = s + alpha_code * f
+        f = f * 4
 
-        for i in range(len(sequence) - self.mer_size + 1):
-            kmer = sequence[i:i + self.mer_size]
-
-            if self.alphabet and bool(search(kmer)) or not self.alphabet:
-                self[kmer] += 1
+    return s
 
 
-class KmersCollection(object):
+class FullKmersCollection(object):
 
-    def __init__(self, sequences, unit_size=1, n=1, alphabet="ACGT"):
-        self.unit_size = unit_size
-        self.n = n
+    def __init__(self, sequences, k=5, alphabet="ACGT"):
+        self.k = k
         self.alphabet = alphabet
         #
-        self.kmers = defaultdict(lambda: [0] * len(sequences))
         self.ids = []
-        self.data = []
-        self.kmers_list = []
+        self.v_size = np.power(len(self.alphabet), self.k)
+        self.data = np.zeros((len(sequences), self.v_size))
         #
         self._compute_kmers_collection(sequences)
 
+    def _compute_kmers_sequence(self, sequence, ind):
+        search = re.compile("^["+self.alphabet+"]+$").search
+        
+        kmer_array = np.zeros(self.v_size)
+
+        for i in range(len(sequence) - self.k + 1):
+            kmer = sequence[i:i + self.k]
+
+            if self.alphabet and bool(search(kmer)) or not self.alphabet:
+                ind_kmer = get_kmer_index(kmer, self.k)
+                self.data[ind][ind_kmer] += 1
+
+        return self
+ 
     def _compute_kmers_collection(self, sequences):
         for i, seq in enumerate(sequences):
-            seq_kmers = Kmers(seq.seq._data, n=self.n,
-                                unit_size=self.unit_size,
-                                alphabet=self.alphabet)
-
+            self._compute_kmers_sequence(seq.seq._data, i)
             self.ids.append(seq.id)
 
-            for _kmer in seq_kmers:
-                self.kmers[_kmer][i] = seq_kmers[_kmer]
-
-        self.kmers_list = sorted(self.kmers.keys())
-
-        for _kmer in self.kmers_list:
-            self.data.append(self.kmers[_kmer])
-
-        self.data = np.array(self.data).transpose()
-
+        return self
