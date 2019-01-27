@@ -1,9 +1,8 @@
 import kmers
-from abc import ABC, abstractmethod
 import numpy as np
+from scipy.special import logsumexp
 
-
-class BaseMultinomialNaiveBayes(ABC):
+class BaseMultinomialNaiveBayes():
     """
     """
 
@@ -24,7 +23,6 @@ class BaseMultinomialNaiveBayes(ABC):
 
         # Compute class priors
         # Calcul des probabilites a priori pour chaque classe
-        # P(y_i) = #{y_i} / #{y}
 
         self.class_counts_ = np.zeros(self.n_classes)
 
@@ -41,17 +39,22 @@ class BaseMultinomialNaiveBayes(ABC):
             self.class_priors_ = self.priors
 
         else:
+            # P(y_i) = #{y_i} / #{y}
             self.class_priors_ = self.class_counts_ / self.class_counts_.sum()
 
+        # log class priors
+        self.log_class_priors_ = np.log(self.class_priors_)
+
         # compute kmers
-        self.main_kmer = kmers.FullKmersCollection(sequences, k=self.main_k, alphabet=self.alphabet)
-        #self.secd_kmer = kmers.FullKmersCollection(sequences, k=secd_k, alphabet="ACGT")
+        self.main_kmers = kmers.FullKmersCollection(sequences, k=self.main_k, alphabet=self.alphabet)
+        #self.secd_kmers = kmers.FullKmersCollection(sequences, k=secd_k, alphabet="ACGT")
 
         # compute y per target value
         self.y = np.zeros((self.n_classes, self.v_size)) 
+        self.log_kmer_probs = np.zeros(self.y.shape)
 
         for ind in range(self.n_classes):
-            X_class = self.main_kmer.data[targets == self.classes_[ind]]
+            X_class = self.main_kmers.data[targets == self.classes_[ind]]
             # sum word by word
             self.y[ind, :] = np.sum(X_class, axis=0)
 
@@ -63,18 +66,28 @@ class BaseMultinomialNaiveBayes(ABC):
 
         return self
 
-    @abstractmethod
     def _log_joint_prob_density(self, sequences):
         """
         Compute the unnormalized posterior log probability of sequence
-        
+ 
         I.e. ``log P(C) + log P(sequence | C)`` for all rows x of X, as an array-like of
-        shape [n_classes, n_sequences].
-        
-        Input is passed to _joint_log_likelihood as-is by predict,
-        predict_proba and predict_log_proba.
-        
+        shape [n_sequences, n_classes].
+
+        Input is passed to _log_joint_prob_density as-is by predict,
+        predict_proba and predict_log_proba. 
         """
+
+        seqs_kmers = kmers.FullKmersCollection(sequences, k=self.main_k, alphabet=self.alphabet)
+        
+        #log_joint_prob_density = []
+        #for i in range(self.n_classes):
+        #    # compute the log conditional prob density distribution for class i
+        #    log_likelihood_dens = np.dot(seqs_kmers.data, self.log_kmer_probs[i])
+        #    # compute the log joint prob density distribution for class i
+        #    log_joint_prob_density.append(self.log_class_priors_[i] + log_likelihood_dens)
+        #log_joint_prob_density = np.array(log_joint_prob_density).T
+
+        return np.dot(seqs_kmers.data, self.log_kmer_probs.T) + self.log_class_priors_
 
     def predict(self, sequences):
         """
@@ -154,39 +167,12 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
  
     def fit(self, sequences, main_k, secd_k):
         self._initial_fit(sequences, main_k)
-        self.prob_kmers = np.zeros(self.y.shape)
 
-        for ind in range(self.n_classes):
-            self.prob_kmers[ind] = np.divide(self.y[ind], self.Y[ind]) 
+        #for ind in range(self.n_classes):
+        #    self.log_kmer_probs[ind] = np.log(self.y[ind]) - np.log(self.Y[ind])
+        #self.log_kmer_probs = np.nan_to_num(self.log_kmer_probs)
 
+        self.log_kmer_probs = np.nan_to_num(np.log(self.y.T) - np.log(self.Y)).T 
+        
         return self
 
-    def _log_joint_prob_density(self, sequences):
-        """
-        Compute the unnormalized posterior log probability of sequence
-        
-        I.e. ``log P(C) + log P(sequence | C)`` for all rows x of X, as an array-like of
-        shape [n_classes, n_sequences].
-        
-        Input is passed to _joint_log_likelihood as-is by predict,
-        predict_proba and predict_log_proba.
-        
-        """
-        log_joint_prob_density = []
-
-        seqs_kmer = kmers.FullKmersCollection(sequences, k=self.main_k, alphabet=self.alphabet)
-        #
-        for i in range(np.size(self.classes_)):
-            # compute the log prob of class prior i
-            log_prior_i = np.log(self.class_priors_[i])
-
-            # compute the log conditional prob density distribution for class i
-            log_likelihood_dens = 0
-
-            # compute the log joint prob density distribution for class i
-            log_joint_prob_density.append(log_prior_i + log_likelihood_dens)
-
-        #
-        log_joint_prob_density = np.array(log_joint_prob_density).T
-
-        return log_joint_prob_density
