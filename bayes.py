@@ -178,7 +178,7 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
         #self.log_kmer_probs = np.nan_to_num(np.log(self.y.T) - np.log(self.Y)).T
         
         # M3
-        self.log_kmer_probs = np.nan_to_num(np.log(clf.y) - np.log(clf.Y.reshape(-1, 1))) 
+        self.log_kmer_probs = np.nan_to_num(np.log(self.y) - np.log(self.Y.reshape(-1, 1))) 
         
         return self
 
