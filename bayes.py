@@ -61,8 +61,9 @@ class BaseMultinomialNaiveBayes():
         # compute the sum of ys
         self.Y = np.zeros(self.n_classes)
 
-        for ind in range(self.n_classes):
-            self.Y[ind] = np.sum(self.y[ind])
+        #for ind in range(self.n_classes):
+        #    self.Y[ind] = np.sum(self.y[ind])
+        self.Y = self.y.sum(axis=1)
 
         return self
 
@@ -165,14 +166,33 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
     """
     """
  
-    def fit(self, sequences, main_k, secd_k):
+    def fit(self, sequences, main_k):
         self._initial_fit(sequences, main_k)
 
+        # M1
         #for ind in range(self.n_classes):
         #    self.log_kmer_probs[ind] = np.log(self.y[ind]) - np.log(self.Y[ind])
         #self.log_kmer_probs = np.nan_to_num(self.log_kmer_probs)
 
-        self.log_kmer_probs = np.nan_to_num(np.log(self.y.T) - np.log(self.Y)).T 
+        # M2
+        #self.log_kmer_probs = np.nan_to_num(np.log(self.y.T) - np.log(self.Y)).T
         
+        # M3
+        self.log_kmer_probs = np.nan_to_num(np.log(clf.y) - np.log(clf.Y.reshape(-1, 1))) 
+        
+        return self
+
+class Smooth_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
+    """
+    """
+
+    def fit(self, sequences, main_k, alpha):
+        self._initial_fit(sequences, main_k)
+
+        smooth_y = self.y + alpha
+        smooth_Y = self.Y + (alpha * self.v_size)
+
+        self.log_kmer_probs = np.log(smooth_y) - np.log(smooth_Y.reshape(-1, 1))
+
         return self
 
