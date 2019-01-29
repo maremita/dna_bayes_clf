@@ -1,41 +1,37 @@
-import kmers
 from kmers import get_kmer_index
 from itertools import product
 import numpy as np
 from scipy.special import logsumexp
 
+
 class BaseMultinomialNaiveBayes():
     """
     """
 
-    def __init__(self, alphabet= "ACGT", priors=None):
+    def __init__(self, priors=None):
         self.priors = priors
-        self.alphabet = alphabet
 
-    def _initial_fit(self, sequences, main_k):
+    def _initial_fit(self, X, targets):
         """
         """
         
-        self.main_k = main_k
-        # ordered list of target labels
-        targets = np.asarray(sequences.targets)
         self.classes_ = np.unique(targets)
-        self.n_classes = len(self.classes_)
-        self.v_size = np.power(len(self.alphabet), self.main_k)
+        n_classes = len(self.classes_)
+        v_size = X.shape[1]
 
         # Compute class priors
         # Calcul des probabilites a priori pour chaque classe
 
-        self.class_counts_ = np.zeros(self.n_classes)
+        self.class_counts_ = np.zeros(n_classes)
 
-        for ind in range(self.n_classes):
+        for ind in range(n_classes):
             self.class_counts_[ind] = len(targets[targets==self.classes_[ind]])
  
         if self.priors == "uniform":
-            self.class_priors_ = np.full(self.n_classes, 1/self.n_classes)
+            self.class_priors_ = np.full(n_classes, 1/n_classes)
 
         elif self.priors == "ones":
-            self.class_priors_ = np.full(self.n_classes, 1)
+            self.class_priors_ = np.full(n_classes, 1)
 
         elif self.priors is not None:
             self.class_priors_ = self.priors
@@ -47,29 +43,25 @@ class BaseMultinomialNaiveBayes():
         # log class priors
         self.log_class_priors_ = np.log(self.class_priors_)
 
-        # compute kmers
-        self.main_kmers = kmers.FullKmersCollection(sequences, k=self.main_k, alphabet=self.alphabet)
-        #self.secd_kmers = kmers.FullKmersCollection(sequences, k=secd_k, alphabet="ACGT")
-
         # compute y per target value
-        self.y = np.zeros((self.n_classes, self.v_size)) 
-        self.log_kmer_probs = np.zeros(self.y.shape)
+        self.y_ = np.zeros((n_classes, v_size)) 
+        self.log_kmer_probs_ = np.zeros(self.y_.shape)
 
-        for ind in range(self.n_classes):
-            X_class = self.main_kmers.data[targets == self.classes_[ind]]
+        for ind in range(n_classes):
+            X_class = X[targets == self.classes_[ind]]
             # sum word by word
-            self.y[ind, :] = np.sum(X_class, axis=0)
+            self.y_[ind, :] = np.sum(X_class, axis=0)
 
         # compute the sum of ys
-        self.Y = np.zeros(self.n_classes)
+        self.Y_ = np.zeros(n_classes)
 
-        #for ind in range(self.n_classes):
-        #    self.Y[ind] = np.sum(self.y[ind])
-        self.Y = self.y.sum(axis=1)
+        #for ind in range(n_classes):
+        #    self.Y_[ind] = np.sum(self.y_[ind])
+        self.Y_ = self.y_.sum(axis=1)
 
         return self
 
-    def _log_joint_prob_density(self, sequences):
+    def _log_joint_prob_density(self, X):
         """
         Compute the unnormalized posterior log probability of sequence
  
@@ -80,25 +72,23 @@ class BaseMultinomialNaiveBayes():
         predict_proba and predict_log_proba. 
         """
 
-        seqs_kmers = kmers.FullKmersCollection(sequences, k=self.main_k, alphabet=self.alphabet)
-        
         #log_joint_prob_density = []
-        #for i in range(self.n_classes):
+        #for i in range(n_classes):
         #    # compute the log conditional prob density distribution for class i
-        #    log_likelihood_dens = np.dot(seqs_kmers.data, self.log_kmer_probs[i])
+        #    log_likelihood_dens = np.dot(X, self.log_kmer_probs_[i])
         #    # compute the log joint prob density distribution for class i
         #    log_joint_prob_density.append(self.log_class_priors_[i] + log_likelihood_dens)
         #log_joint_prob_density = np.array(log_joint_prob_density).T
 
-        return np.dot(seqs_kmers.data, self.log_kmer_probs.T) + self.log_class_priors_
+        return np.dot(X, self.log_kmer_probs_.T) + self.log_class_priors_
 
-    def predict(self, sequences):
+    def predict(self, X):
         """
         Perform classification on an array of test vectors X.
 
         Parameters
         ----------
-        sequences : 
+        X : 
 
         Returns
         -------
@@ -106,18 +96,18 @@ class BaseMultinomialNaiveBayes():
             Predicted target values for X
         """
 
-        ljb = self._log_joint_prob_density(sequences)
+        ljb = self._log_joint_prob_density(X)
         # ljb has a shape of (n_sequences, n_classes)
 
         return self.classes_[np.argmax(ljb, axis=1)]
 
-    def predict_log_proba(self, sequences):
+    def predict_log_proba(self, X):
         """
         Return log-probability estimates for the test vector X.
         
         Parameters
         ----------
-        sequences : 
+        X : 
  
         Returns
         -------
@@ -127,7 +117,7 @@ class BaseMultinomialNaiveBayes():
             order, as they appear in the attribute `classes_`.
         """
 
-        ljb = self._log_joint_prob_density(sequences)
+        ljb = self._log_joint_prob_density(X)
 
         # normalize by P(x) = P(f_1, ..., f_n) la formule est fausse
         # We use marginalization to compute P(x)
@@ -146,13 +136,13 @@ class BaseMultinomialNaiveBayes():
 
         return ljb - np.atleast_2d(log_prob_x).T
 
-    def predict_proba(self, sequences):
+    def predict_proba(self, X):
         """
         Return probability estimates for the test vector X.
  
         Parameters
         ----------
-        sequences : 
+        X : 
 
         Returns
         -------
@@ -162,52 +152,54 @@ class BaseMultinomialNaiveBayes():
             order, as they appear in the attribute `classes_`.
         """
 
-        return np.exp(self.predict_log_proba(sequences))
+        return np.exp(self.predict_log_proba(X))
 
 class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
     """
     """
  
-    def fit(self, sequences, main_k):
-        self._initial_fit(sequences, main_k)
+    def fit(self, X, targets):
+        self._initial_fit(X, targets)
 
         # M1
-        #for ind in range(self.n_classes):
-        #    self.log_kmer_probs[ind] = np.log(self.y[ind]) - np.log(self.Y[ind])
-        #self.log_kmer_probs = np.nan_to_num(self.log_kmer_probs)
+        #for ind in range(n_classes):
+        #    self.log_kmer_probs_[ind] = np.log(self.y_[ind]) - np.log(self.Y_[ind])
+        #self.log_kmer_probs_ = np.nan_to_num(self.log_kmer_probs_)
 
         # M2
-        #self.log_kmer_probs = np.nan_to_num(np.log(self.y.T) - np.log(self.Y)).T
+        #self.log_kmer_probs_ = np.nan_to_num(np.log(self.y_.T) - np.log(self.Y_)).T
         
         # M3
-        self.log_kmer_probs = np.nan_to_num(np.log(self.y) - np.log(self.Y.reshape(-1, 1))) 
+        self.log_kmer_probs_ = np.nan_to_num(np.log(self.y_) - np.log(self.Y_.reshape(-1, 1))) 
  
         return self
 
 class Smooth_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
     """
     """
-    def __init__(self, alphabet= "ACGT", priors=None, alpha=1e-10):
-        super().__init__(alphabet=alphabet, priors=priors)
+    def __init__(self,priors=None, alpha=1e-10):
+        super().__init__(priors=priors)
         # validate alpha
         self.alpha = self.check_alpha(alpha)
 
-    def fit(self, sequences, main_k):
-        self._initial_fit(sequences, main_k)
+    def fit(self, X, targets):
+        self._initial_fit(X, targets)
+        v_size = X.shape[1]
 
         # Beta
-        beta = self.y + self.alpha
-        beta_sum = self.Y + (self.alpha * self.v_size)
+        beta = self.y_ + self.alpha
+        beta_sum = self.Y_ + (self.alpha * v_size)
 
-        self.log_kmer_probs = np.log(beta) - np.log(beta_sum.reshape(-1, 1))
+        self.log_kmer_probs_ = np.log(beta) - np.log(beta_sum.reshape(-1, 1))
 
         return self
-    
+ 
     # TODO
-    def check_alpha(alpha):
+    def check_alpha(self, alpha):
         return alpha
 
-def alpha_estimate_markov_chain(sequences, alphabet, main_k, secd_k):
+
+def alpha_estimate_markov_chain_from(sequences, alphabet, main_k, secd_k):
     v_size = np.power(len(alphabet), main_k)
     prior_alpha = np.zeros(v_size)
     all_kmers = ["".join(t) for t in product(alphabet, repeat=main_k)]
@@ -221,6 +213,7 @@ def alpha_estimate_markov_chain(sequences, alphabet, main_k, secd_k):
         p_alpha[kmer_ind] = np.exp(log_kmer_prior)
 
     return prior_alpha
+
 
 #    def compute_alpha(self, sequences, alpha):
 #        prior_alpha = alpha
