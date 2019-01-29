@@ -1,4 +1,6 @@
 import kmers
+from kmers import get_kmer_index
+from itertools import product
 import numpy as np
 from scipy.special import logsumexp
 
@@ -179,20 +181,100 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
         
         # M3
         self.log_kmer_probs = np.nan_to_num(np.log(self.y) - np.log(self.Y.reshape(-1, 1))) 
-        
+ 
         return self
 
 class Smooth_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
     """
     """
+    def __init__(self, alphabet= "ACGT", priors=None, alpha=1e-10):
+        super().__init__(alphabet=alphabet, priors=priors)
+        # validate alpha
+        self.alpha = self.check_alpha(alpha)
 
-    def fit(self, sequences, main_k, alpha):
+    def fit(self, sequences, main_k):
         self._initial_fit(sequences, main_k)
 
-        smooth_y = self.y + alpha
-        smooth_Y = self.Y + (alpha * self.v_size)
+        # Beta
+        beta = self.y + self.alpha
+        beta_sum = self.Y + (self.alpha * self.v_size)
 
-        self.log_kmer_probs = np.log(smooth_y) - np.log(smooth_Y.reshape(-1, 1))
+        self.log_kmer_probs = np.log(beta) - np.log(beta_sum.reshape(-1, 1))
 
         return self
+    
+    # TODO
+    def check_alpha(alpha):
+        return alpha
 
+def alpha_estimate_markov_chain(sequences, alphabet, main_k, secd_k):
+    v_size = np.power(len(alphabet), main_k)
+    prior_alpha = np.zeros(v_size)
+    all_kmers = ["".join(t) for t in product(alphabet, repeat=main_k)]
+
+    #
+
+    for i, kmer in enumerate(all_kmers):
+        kmer_ind = get_kmer_index(kmer, main_k)
+
+        log_kmer_prior = 0
+        p_alpha[kmer_ind] = np.exp(log_kmer_prior)
+
+    return prior_alpha
+
+#    def compute_alpha(self, sequences, alpha):
+#        prior_alpha = alpha
+#
+#        # If alpha is not int, float or array
+#        if alpha == "mc_w_p":
+#            # Markov chain with probabilities depend on 
+#            # the sequence of the kmer 
+#            prior_alpha = self._mc_word_dependant_priors()
+#        
+#        elif alpha == "mc_c_p":
+#            # Markov chain with probabilities depend on
+#            # the frequence of words per class
+#            prior_alpha = self._mc_class_dependant_priors(sequences)
+#
+#        return prior_alpha
+#
+#    def _mc_word_dependant_priors(self):
+#        """
+#        mc for Markov chain
+#        """
+#        mc_order = 3
+#        orders_dict = dict()
+#        lw = self.main_k 
+#        ly = lw - mc_order + 1
+#        lz = lw - mc_order
+#
+#
+#        p_alpha = np.zeros(self.v_size)
+#        all_kmers = ["".join(t) for t in product(self.alphabet, repeat=self.main_k)]
+#        # get_kmer_index(kmer, k)
+#        
+#        print("Generate n-order kmers")
+#        for i in range(mc_order-1, mc_order+1):
+#            orders_dict[i] = kmers.FullKmersCollection(all_kmers, k=i)
+#        
+#        print("Compute alpha")
+#        for i, kmer in enumerate(all_kmers):
+#            kmer_ind = get_kmer_index(kmer, lw)
+# 
+#            logs1 = np.sum([np.log(val) for val in orders_dict[mc_order].data[i] if val != 0])
+#            logs2 = np.sum([np.log(val) for val in orders_dict[mc_order-1].data[i] if val != 0])
+#            print("logs1 {}\nlogs2 {}\n".format(logs1, logs2))
+#
+#            log_kmer_prior = (ly * np.log(lz)) - (ly * np.log(lw)) + logs1 - logs2
+#            p_alpha[kmer_ind] = np.exp(log_kmer_prior)
+#
+#        print(p_alpha)
+#
+#        return 1
+#
+#    def _mc_class_dependant_priors(self, sequences):
+#
+#        p_alpha = np.zeros(self.v_size)
+#        all_kmers = ["".join(t) for t in product(self.alphabet, repeat=self.v_size)]
+#
+#        return p_alpha

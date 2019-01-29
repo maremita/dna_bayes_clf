@@ -1,4 +1,5 @@
 from collections import defaultdict
+from seq_collection import SeqClassCollection
 import numpy as np
 import re
 
@@ -34,9 +35,13 @@ class FullKmersCollection(object):
         self.v_size = np.power(len(self.alphabet), self.k)
         self.data = np.zeros((len(sequences), self.v_size))
         #
-        self._compute_kmers_collection(sequences)
+        if isinstance(sequences, SeqClassCollection):
+            self._compute_kmers_from_collection(sequences)
 
-    def _compute_kmers_sequence(self, sequence, ind):
+        else:
+            self._compute_kmers_from_strings(sequences)
+
+    def _compute_kmers_of_sequence(self, sequence, ind):
         search = re.compile("^["+self.alphabet+"]+$").search
         
         kmer_array = np.zeros(self.v_size)
@@ -50,9 +55,16 @@ class FullKmersCollection(object):
 
         return self
  
-    def _compute_kmers_collection(self, sequences):
+    def _compute_kmers_from_collection(self, sequences):
         for i, seq in enumerate(sequences):
-            self._compute_kmers_sequence(seq.seq._data, i)
+            self._compute_kmers_of_sequence(seq.seq._data, i)
             self.ids.append(seq.id)
+
+        return self
+
+    def _compute_kmers_from_strings(self, sequences):
+        for i, seq in enumerate(sequences):
+            self._compute_kmers_of_sequence(seq, i)
+            self.ids.append(i)
 
         return self

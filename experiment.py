@@ -19,8 +19,8 @@ clf.fit(seqco, k)
 print('clf.log_kmer_probs')
 print(clf.log_kmer_probs)
 
-slf = bayes.Smooth_MultinomialNaiveBayes()
-slf.fit(seqco, k, alpha)
+slf = bayes.Smooth_MultinomialNaiveBayes(alpha=alpha)
+slf.fit(seqco, k)
 print('slf.log_kmer_probs')
 print(slf.log_kmer_probs)
 
