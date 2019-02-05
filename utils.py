@@ -1,6 +1,12 @@
+from itertools import product
 import numpy as np
 
-__all__ = ['get_index_from_kmer', 'get_kmer_from_index', 'compute_backoff_words']
+__all__ = ['check_alpha','get_index_from_kmer', 'get_kmer_from_index', 'compute_backoff_words']
+
+
+# TODO
+def check_alpha(self, alpha):
+    return alpha
 
 
 # TODO write more generic function (alphabet as parameter)
@@ -54,6 +60,7 @@ def base10toN(num, base):
 
     return l
 
+
 def compute_backoff_words(X):
     old_k = int(math.log(X.shape[1], 4))
     new_k = old_k - 1
@@ -68,3 +75,8 @@ def compute_backoff_words(X):
         new_X[:,new_ind] += X[:,old_ind]
     
     return new_X
+
+
+def generate_all_words(alphabet, k):
+    return ["".join(t) for t in product(alphabet, repeat=k)]
+

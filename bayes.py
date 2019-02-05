@@ -1,4 +1,4 @@
-from utils import compute_backoff_words
+from utils import compute_backoff_words, check_alpha
 
 from abc import ABC, abstractmethod
 import numpy as np
@@ -12,7 +12,7 @@ class BaseBayesClassification(ABC):
     def __init__(self, priors=None):
         self.priors = priors
 
-    def _prior_fit(self, X, targets):
+    def _class_prior_fit(self, X, targets):
         """
         """
         
@@ -141,7 +141,7 @@ class BaseMultinomialNaiveBayes(BaseBayesClassification):
         """
 
         # fit the priors
-        self._prior_fit(X, targets)
+        self._class_prior_fit(X, targets)
         
         self.v_size_ = X.shape[1]
 
@@ -199,17 +199,17 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
         
         # M3
         self.log_kmer_probs_ = np.nan_to_num(np.log(self.y_) - np.log(self.Y_.reshape(-1, 1))) 
- 
+
         return self
 
 
-class Smooth_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
+class Bayesian_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
     """
     """
-    def __init__(self,priors=None, alpha=1e-10):
+    def __init__(self, priors=None, alpha=1e-10):
         super().__init__(priors=priors)
         # validate alpha
-        self.alpha = self.check_alpha(alpha)
+        self.alpha = check_alpha(alpha)
 
     def fit(self, X, targets):
         self._initial_fit(X, targets)
@@ -222,10 +222,6 @@ class Smooth_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
 
         return self
  
-    # TODO
-    def check_alpha(self, alpha):
-        return alpha
-
 
 class BaseMarkovModel(BaseBayesClassification):
     """
@@ -239,7 +235,7 @@ class BaseMarkovModel(BaseBayesClassification):
         """
 
         # fit the priors
-        self._prior_fit(X, targets)
+        self._class_prior_fit(X, targets)
  
         self.v_size_ = X.shape[1]
 
@@ -261,7 +257,6 @@ class BaseMarkovModel(BaseBayesClassification):
 
         return self
  
-
     def _log_joint_prob_density(self, X):
         """
         Compute the unnormalized posterior log probability of sequence
@@ -273,17 +268,40 @@ class BaseMarkovModel(BaseBayesClassification):
         predict_proba and predict_log_proba. 
         """
 
-        #log_joint_prob_density = []
-        #for i in range(n_classes):
-        #    # compute the log conditional prob density distribution for class i
-        #    log_likelihood_dens = np.dot(X, self.log_kmer_probs_[i])
-        #    # compute the log joint prob density distribution for class i
-        #    log_joint_prob_density.append(self.log_class_priors_[i] + log_likelihood_dens)
-        #log_joint_prob_density = np.array(log_joint_prob_density).T
-
-        return np.dot(X, self.log_kmer_probs_.T) + self.log_class_priors_
+        return (np.dot(X, self.log_nex_probs_.T) - np.dot(X, self.log_prev_probs_.T)) + self.log_class_priors_
 
 
+class MLE_MarkovModel(BaseMarkovModel):
+    """
+    """
+    
+    def fit(self, X, targets):
+        self._initial_fit(X, targets)
+
+        self.log_nex_probs_ = np.nan_to_num(np.log(self.y_nex_))
+        self.log_prev_probs_ = np.nan_to_num(np.log(self.y_prev_)) 
+
+        return self
+
+
+class Bayesian_MarkovModel(BaseMarkovModel):
+    """
+    """
+
+    def __init__(self, priors=None, alpha=1e-10):
+        super().__init__(priors=priors)
+        # validate alpha
+        self.alpha = check_alpha(alpha)
+
+    def fit(self, X, targets):
+        self._initial_fit(X, targets)
+
+        self.log_nex_probs_ = np.log(self.y_nex_ + self.alpha) 
+        self.log_prev_probs_ = np.log(self.y_prev_ + self.alpha) 
+
+        return self
+
+ 
 # this function will be removed and replaced by a subclass
 # BaseMarkovModel
 def markov_chain_estimation(sequences, all_kmers, k):
@@ -325,9 +343,3 @@ def markov_chain_estimation(sequences, all_kmers, k):
     # normalize
     return final_prob/final_prob.sum(axis=0, keepdims=True)
     #return prior_alpha
-
-#from itertools import product
-#def alpha_estimate_markov_chain_from(sequences, alphabet, main_k, secd_k):
-#    v_size = np.power(len(alphabet), main_k)
-#    all_kmers = ["".join(t) for t in product(alphabet, repeat=main_k)]
-
