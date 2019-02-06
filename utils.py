@@ -1,3 +1,4 @@
+import math
 from itertools import product
 import numpy as np
 
@@ -5,7 +6,7 @@ __all__ = ['check_alpha','get_index_from_kmer', 'get_kmer_from_index', 'compute_
 
 
 # TODO
-def check_alpha(self, alpha):
+def check_alpha(alpha):
     return alpha
 
 
