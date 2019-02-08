@@ -1,4 +1,4 @@
-from utils import compute_backoff_words, check_alpha
+from .utils import compute_backoff_words, check_alpha
 
 from abc import ABC, abstractmethod
 import numpy as np

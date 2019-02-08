@@ -1,5 +1,5 @@
-from seq_collection import SeqClassCollection
-from utils import get_index_from_kmer
+from .seq_collection import SeqClassCollection
+from .utils import get_index_from_kmer
 import re
 import numpy as np
 

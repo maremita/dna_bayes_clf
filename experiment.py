@@ -1,6 +1,8 @@
-import seq_collection
-import kmers
-import bayes
+#!/usr/bin/env python
+
+from lib import seq_collection
+from lib import kmers
+from lib import bayes
 
 import numpy as np
 from sklearn.naive_bayes import MultinomialNB
@@ -23,12 +25,12 @@ clf.fit(k2.data, targets)
 print('clf.log_kmer_probs_')
 print(clf.log_kmer_probs_)
 
-slf = bayes.Smooth_MultinomialNaiveBayes(alpha=alpha)
+slf = bayes.Bayesian_MultinomialNaiveBayes(alpha=alpha)
 slf.fit(k2.data, targets)
 print('slf.log_kmer_probs_')
 print(slf.log_kmer_probs_)
 
 mnb = MultinomialNB(alpha=alpha)
-mnb.fit(k2.data, targets) 
+mnb.fit(k2.data, targets)
 print('mnb.feature_log_prob_')
 print(mnb.feature_log_prob_)
