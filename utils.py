@@ -7,6 +7,10 @@ __all__ = ['check_alpha','get_index_from_kmer', 'get_kmer_from_index', 'compute_
 
 # TODO
 def check_alpha(alpha):
+    
+    if isinstance(alpha, list):
+        alpha = np.asarray(alpha)
+
     return alpha
 
 
