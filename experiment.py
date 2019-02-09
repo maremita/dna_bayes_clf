@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from lib import seq_collection
-from lib import kmers
-from lib import bayes
+from src import seq_collection
+from src import kmers
+from src import bayes
 
 import numpy as np
 from sklearn.naive_bayes import MultinomialNB

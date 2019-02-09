@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from lib import seq_collection
-from lib import kmers
-from lib import bayes
-from lib import utils
+from src import seq_collection
+from src import kmers
+from src import bayes
+from src import utils
 
 import numpy as np
 from sklearn.model_selection import ShuffleSplit
@@ -17,8 +17,8 @@ __version__ = "0.1"
 
 if __name__ == "__main__":
     
-    k_main = 7
-    k_estm = 3
+    k_main = 9
+    k_estm = 2
     rs = 0  # random_state
 
     cls_file = "data/viruses/HBV/1_HBV_geo_balanced.csv"
