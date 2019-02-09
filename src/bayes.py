@@ -191,6 +191,7 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
     """
  
     def fit(self, X, y):
+        y = np.asarray(y)
         self._initial_fit(X, y)
 
         # Method 1
@@ -216,6 +217,7 @@ class Bayesian_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
         self.alpha = check_alpha(alpha)
 
     def fit(self, X, y):
+        y = np.asarray(y)
         self._initial_fit(X, y)
 
         # Beta
@@ -282,6 +284,7 @@ class MLE_MarkovModel(BaseMarkovModel):
     """
     
     def fit(self, X, y):
+        y = np.asarray(y)
         self._initial_fit(X, y)
 
         self.log_next_probs_ = np.nan_to_num(np.log(self.count_per_class_next_))
@@ -300,52 +303,17 @@ class Bayesian_MarkovModel(BaseMarkovModel):
         self.alpha = check_alpha(alpha)
 
     def fit(self, X, y):
+        y = np.asarray(y)
         self._initial_fit(X, y)
 
-        self.log_next_probs_ = np.log(self.count_per_class_next_ + self.alpha) 
-        self.log_prev_probs_ = np.log(self.count_per_class_prev_ + self.alpha) 
+        alpha_main = alpha_back = self.alpha
+
+        if isinstance(self.alpha, tuple):
+            alpha_main = self.alpha[0]
+            alpha_back = self.alpha[1]
+
+        self.log_next_probs_ = np.log(self.count_per_class_next_ + alpha_main) 
+        self.log_prev_probs_ = np.log(self.count_per_class_prev_ + alpha_back)
 
         return self
 
- 
-# this function will be removed and replaced by a subclass
-# BaseMarkovModel
-def markov_chain_estimation(sequences, all_kmers, k):
-    from kmers import FullKmersCollection
-    from utils import get_index_from_kmer
-    import numpy as np
-    
-    v_size = len(all_kmers)
-
-    # y (targets)
-    y = np.asarray(sequences.y)
-    u_classes = np.unique(y)
-    n_classes = len(u_classes)
- 
-    prior_alpha = np.zeros((n_classes, v_size))
-
-    # Compute kmer word counts for k and k-1
-    # n order
-    words_k_0 = FullKmersCollection(sequences, k=k)
-    clf_k_0 = MLE_MultinomialNaiveBayes(priors="ones").fit(words_k_0.data, y)
-    all_kmers_c = FullKmersCollection(all_kmers, k=k).data
-    log_probs_c = clf_k_0._log_joint_prob_density(all_kmers_c)
-
-    # n-1 order
-    words_k_1 = FullKmersCollection(sequences, k=(k - 1))
-    clf_k_1 = MLE_MultinomialNaiveBayes(priors="ones").fit(words_k_1.data, y)
-    all_kmers_c_1 = FullKmersCollection(all_kmers, k=(k - 1)).data
-    log_probs_c_1 = clf_k_1._log_joint_prob_density(all_kmers_c_1)
-
-
-    final_logs = log_probs_c - log_probs_c_1
-    final_prob = np.exp(final_logs)
-
-    #for i, kmer in enumerate(all_kmers):
-    #    kmer_ind = get_index_from_kmer(kmer, main_k)
-    #    
-    #    prior_alpha[kmer_ind] = np.exp(final_logs[i])
-
-    # normalize
-    return final_prob/final_prob.sum(axis=0, keepdims=True)
-    #return prior_alpha

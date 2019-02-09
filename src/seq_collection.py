@@ -36,7 +36,6 @@ class SeqClassCollection(UserList):
             self.data = list(arg)
             self.get_targets() 
 
-
     def set_targets(self):
         for seqRecord in self.data:
             if seqRecord.id in self.target_map:
@@ -47,7 +46,6 @@ class SeqClassCollection(UserList):
                 print("No target label for {}\n".format(seqRecord.id))
                 self.targets.append("UNKNOWN")
 
-
     def get_targets(self):
 
         self.target_map = dict((seqRec.id, seqRec.target)
@@ -55,14 +53,24 @@ class SeqClassCollection(UserList):
 
         self.targets = list(seqRec.target for seqRec in self.data)
 
-    def __getitem__(self, i):
+    def __getitem__(self, ind):
         # shallow copy 
-        if isinstance(i, int):
-            return self.data[i]
 
-        return self.__class__(self.data[i])
+        #if the argument is an integer
+        if isinstance(ind, int):
+            return self.data[ind]
 
- 
+        # If the argument is a list of indexes
+        elif isinstance(ind, list):
+
+            tmp = [self.data[i] for i in ind if i>= 0 and i<len(self.data)]
+            return self.__class__(tmp)
+
+        # TODO
+        # raise exception if the argument is not a int, list or slice
+
+        return self.__class__(self.data[ind])
+
     @classmethod
     def read_bio_file(cls, my_file):
         path, ext = splitext(my_file)
