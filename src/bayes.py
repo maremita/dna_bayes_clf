@@ -6,8 +6,15 @@ from scipy.special import logsumexp, gammaln
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 
+# #########################
+#
+# BASE MODEL
+#
+# #########################
+
 class BaseBayesClassification(ABC, BaseEstimator, ClassifierMixin):
     """
+    Do not instantiate this class
     """
 
     def __init__(self, priors=None):
@@ -129,6 +136,11 @@ class BaseBayesClassification(ABC, BaseEstimator, ClassifierMixin):
 
         return np.exp(self.predict_log_proba(X))
 
+# #########################
+#
+# MULTINOMIAL MODELS
+#
+# #########################
 
 class BaseMultinomialNaiveBayes(BaseBayesClassification):
     """
@@ -143,7 +155,7 @@ class BaseMultinomialNaiveBayes(BaseBayesClassification):
 
         # fit the priors
         self._class_prior_fit(X, y)
-        
+
         self.v_size_ = X.shape[1]
 
         # compute y per target value
@@ -211,24 +223,59 @@ class MLE_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
 class Bayesian_MultinomialNaiveBayes(BaseMultinomialNaiveBayes):
     """
     """
-    def __init__(self, priors=None, alpha=1e-10):
+    def __init__(self, priors=None, alpha=1e-10, 
+            X_estim=None, y_estim=None, kmers=None):
+
         super().__init__(priors=priors)
+ 
+        if not(X_estim is None or y_estim is None or kmers is None):
+            self.alpha, self.alpha_classes = self.fit_alpha_with_markov_for_multinomial(X_estim, y_estim, kmers)
+
         # validate alpha
-        self.alpha = check_alpha(alpha)
+        else:
+            self.alpha = check_alpha(alpha)
 
     def fit(self, X, y):
         y = np.asarray(y)
         self._initial_fit(X, y)
+ 
+        # Validate if the classes are the same as those estimated for alpha
+        if hasattr(self, 'alpha_classes'):
+            if not np.array_equal(self.alpha_classes, self.classes_):
+                raise ValueError("Classes from estimating alpha are not the same in y")
 
         # Beta
-        beta = self.count_per_class_ + self.alpha
+        self.beta_ = self.count_per_class_ + self.alpha
         #beta_sum = self.total_counts_per_class_ + (self.alpha * self.v_size_)
-        beta_sum = beta.sum(axis=1) 
+        beta_sum = self.beta_.sum(axis=1) 
+        
+        print(self.count_per_class_.sum(axis=1))
+        print(self.beta_.sum(axis=1))
 
-        self.log_kmer_probs_ = np.log(beta) - np.log(beta_sum.reshape(-1, 1))
+        self.log_kmer_probs_ = np.log(self.beta_) - np.log(beta_sum.reshape(-1, 1))
 
         return self
- 
+
+    @staticmethod
+    def fit_alpha_with_markov_for_multinomial(X_estim, y_estim, kmers):
+        print("markov modelling of kmers in MNB")
+        #estimation_model = Bayesian_MarkovModel(priors="ones").fit(X_estim, y_estim)
+        estimation_model = MLE_MarkovModel(priors="ones").fit(X_estim, y_estim)
+        #estimation_model = Bayesian_MultinomialNaiveBayes(priors="ones").fit(X_estim, y_estim)
+        # get probabilities of kmer words
+        prob_kmers = estimation_model.predict_proba(kmers)
+
+        ##  Normalization
+        prob_kmers = prob_kmers/prob_kmers.sum(axis=0)
+        prob_kmers = np.transpose(prob_kmers)
+
+        return prob_kmers, estimation_model.classes_
+
+# #########################
+#
+# MARKOV MODELS
+#
+# #########################
 
 class BaseMarkovModel(BaseBayesClassification):
     """
@@ -297,14 +344,27 @@ class Bayesian_MarkovModel(BaseMarkovModel):
     """
     """
 
-    def __init__(self, priors=None, alpha=1e-10):
+    def __init__(self, priors=None, alpha=1e-10, 
+            X_estim=None, y_estim=None, kmers=None, kmers_backs=None):
+
         super().__init__(priors=priors)
+        
+        if not(X_estim is None or y_estim is None or kmers is None):
+            self.alpha = self.fit_alpha_with_markov_for_markov(X_estim, y_estim, 
+                    kmers, kmers_backs)
+
         # validate alpha
-        self.alpha = check_alpha(alpha)
+        else:
+            self.alpha = check_alpha(alpha)
 
     def fit(self, X, y):
         y = np.asarray(y)
         self._initial_fit(X, y)
+
+        # Validate if the classes are the same as those estimated for alpha
+        if hasattr(self, 'alpha_classes'):
+            if not np.array_equal(self.alpha_classes, self.classes_):
+                raise ValueError("Classes from estimating alpha are not the same in y")
 
         alpha_main = alpha_back = self.alpha
 
@@ -317,3 +377,25 @@ class Bayesian_MarkovModel(BaseMarkovModel):
 
         return self
 
+    @staticmethod
+    def fit_alpha_with_markov_for_markov(X_estim, y_estim, kmers, kmers_backs):
+        print("markov modelling of kmers in markov")
+        estimation_model = MLE_MarkovModel(priors="ones").fit(X_estim, y_estim)
+        # get probabilities of kmer words
+        prob_kmers = estimation_model.predict_proba(kmers)
+
+        # get probabilities of kmer words backoffs
+        prob_backs = estimation_model.predict_proba(kmers_backs)
+
+        ##  Normalization
+        prob_kmers = prob_kmers/prob_kmers.sum(axis=0)
+        prob_kmers = np.transpose(prob_kmers)
+
+        ##  Normalization
+        prob_backs = prob_backs/prob_backs.sum(axis=0)
+        prob_backs = np.transpose(prob_backs)
+
+        # construct alpha for a Markov classifier
+        alpha_markov = (prob_kmers, prob_backs) 
+
+        return alpha_markov
