@@ -1,6 +1,7 @@
 from os.path import splitext
-from Bio import SeqIO
+import re
 from collections import UserList
+from Bio import SeqIO
 
 
 __all__ = ['SeqClassCollection']
@@ -13,13 +14,12 @@ class SeqClassCollection(UserList):
         self.data = []
         self.targets = []
         self.target_map = {}
-        self.sep = "\t"
 
         # If arguments are two files
         # Fasta file and annotation file
         if isinstance(arg, tuple):
             self.data = self.read_bio_file(arg[0])
-            self.target_map = self.read_class_file(arg[1], self.sep)
+            self.target_map = self.read_class_file(arg[1])
             self.set_targets()
 
         # If argument is a list of labeled seq records 
@@ -54,8 +54,12 @@ class SeqClassCollection(UserList):
         self.targets = list(seqRec.target for seqRec in self.data)
 
     def __getitem__(self, ind):
-        # shallow copy 
+        # TODO
+        # Give more details about this exception
+        if not isinstance(ind, (int, list, slice)):
+            raise TypeError("The argument must be int, list or slice")
 
+        # shallow copy 
         #if the argument is an integer
         if isinstance(ind, int):
             return self.data[ind]
@@ -66,9 +70,6 @@ class SeqClassCollection(UserList):
             tmp = [self.data[i] for i in ind if i>= 0 and i<len(self.data)]
             return self.__class__(tmp)
 
-        # TODO
-        # raise exception if the argument is not a int, list or slice
-
         return self.__class__(self.data[ind])
 
     @classmethod
@@ -76,13 +77,17 @@ class SeqClassCollection(UserList):
         path, ext = splitext(my_file)
         ext = ext.lstrip(".")
 
+        if ext == "fa" : ext = "fasta"
+
         return list(seqRec for seqRec in SeqIO.parse(my_file, ext))
 
 
     @classmethod
-    def read_class_file(cls, my_file, sep):
+    def read_class_file(cls, my_file):
+
         with open(my_file, "r") as fh:
-            return dict(map(lambda x: (x[0], x[1]), (line.rstrip("\n").split(sep)
+            #return dict(map(lambda x: (x[0], x[1]), (line.rstrip("\n").split(sep)
+            return dict(map(lambda x: (x[0], x[1]), (re.split(r'[\t|,|;|\s]', line.rstrip("\n"))
                         for line in fh if not line.startswith("#"))))
 
 
