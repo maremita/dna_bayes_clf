@@ -8,12 +8,15 @@ from src import utils
 from pprint import pprint
 
 import numpy as np
-from sklearn.model_selection import ShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import cross_validate, StratifiedKFold
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
+
+#import json
+#import joblib
 
 # import sys
 
@@ -28,7 +31,7 @@ def seq_dataset_construction(seq_file, cls_file, k_main=9, k_estim=3,
 
     # Split sequences for estimation and cv steps
     seq_ind = list(i for i in range(0,len(data_seqs)))
-    a, b = next(ShuffleSplit(n_splits=1, test_size=0.1, random_state=random_state).split(seq_ind))
+    a, b = next(StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=random_state).split(seq_ind, data_seqs.targets))
 
     seq_cv = data_seqs[list(a)]
     seq_estim = data_seqs[list(b)]
@@ -85,10 +88,11 @@ if __name__ == "__main__":
     rs = 0  # random_state
     verbose = True
     priors="uniform"
-
+ 
+    scores_file = "results/viruses/HBV01.json"
     cls_file = "data/viruses/HBV01/class.csv"
     seq_file = "data/viruses/HBV01/data.fa"
-    
+
     if verbose: print("\nDataset construction step")
     seq_cv_X, seq_cv_y, seq_estim_X, seq_estim_y = seq_dataset_construction(seq_file, cls_file, k_main, k_estim)
 
@@ -102,18 +106,22 @@ if __name__ == "__main__":
     a_mkov, a_mkov_y = bayes.Bayesian_MarkovModel.fit_alpha_with_markov(seq_estim_X, seq_estim_y, all_words_data, all_backs_data)
 
     classifiers = {
-            #0: [bayes.MLE_MultinomialNB, {'priors':priors}, "MLE Multinom NBayes"],
+            0: [bayes.MLE_MultinomialNB, {'priors':priors}, "MLE Multinom NBayes"],
             #1: [bayes.Bayesian_MultinomialNB, {'priors':priors, 'alpha':1e-10}, "Bayesian Multinom NBayes with alpha=1e-10"],
-            #2: [bayes.Bayesian_MultinomialNB, {'priors':priors, alpha':1}, "Bayesian Multinom NBayes with alpha=1"],
+            #2: [bayes.Bayesian_MultinomialNB, {'priors':priors, 'alpha':1}, "Bayesian Multinom NBayes with alpha=1"],
             3: [bayes.Bayesian_MultinomialNB, {'priors':priors, 'alpha':a_mnom, 'alpha_classes':a_mnom_y}, "Bayesian Multinom NBayes with estimated alpha"],
+
             #4: [bayes.MLE_MarkovModel, {'priors':priors}, "MLE Markov model"],
             #5: [bayes.Bayesian_MarkovModel, {'priors':priors, 'alpha':1e-10}, "Bayesian Markov model with alpha=1e-10"],
             #6: [bayes.Bayesian_MarkovModel, {'priors':priors, 'alpha':a_mkov, 'alpha_classes':a_mkov_y}, "Bayesian Markov model with estimated alpha"],
 
             #7: [GaussianNB, {'priors':priors}, "Gaussian Naibe Bayes"],
-            #8: [LogisticRegression, {'multi_class':'multinomial', 'solver':'lbfgs'}, "Logistic Regression"],
+            #8: [LogisticRegression, {'multi_class':'multinomial', 'solver':'lbfgs', 'max_iter':500}, "Logistic Regression"],
             #9: [SVC, {'C':1, 'kernel':"linear"}, "Linear SVC"]
            }
 
     scores = clf_evaluation(classifiers, seq_cv_X, seq_cv_y, cv_iter=10, scoring=["f1_weighted"], random_state=rs, verbose=verbose)
-    pprint(scores)
+    print(scores)
+
+    #with open(scores_file ,"w") as fh_out: 
+    #    json.dump(scores, fh_out, indent=2) 
