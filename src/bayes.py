@@ -213,7 +213,9 @@ class MLE_MultinomialNB(BaseMultinomialNB):
         #self.log_kmer_probs_ = np.nan_to_num(np.log(self.count_per_class_.T) - np.log(self.total_counts_per_class_)).T
         
         # Method 3
-        self.log_kmer_probs_ = np.nan_to_num(np.log(self.count_per_class_) - np.log(self.total_counts_per_class_.reshape(-1, 1))) 
+        with np.errstate(divide='ignore', invalid='ignore'):
+            self.log_kmer_probs_ = np.nan_to_num(np.log(self.count_per_class_) - np.log(self.total_counts_per_class_.reshape(-1, 1))) 
+            #self.log_kmer_probs_ = np.log(self.count_per_class_) - np.log(self.total_counts_per_class_.reshape(-1, 1)) 
 
         return self
 
@@ -339,8 +341,9 @@ class MLE_MarkovModel(BaseMarkovModel):
         y = np.asarray(y)
         self._initial_fit(X, y)
 
-        self.log_next_probs_ = np.nan_to_num(np.log(self.count_per_class_next_))
-        self.log_prev_probs_ = np.nan_to_num(np.log(self.count_per_class_prev_)) 
+        with np.errstate(divide='ignore', invalid='ignore'):
+            self.log_next_probs_ = np.nan_to_num(np.log(self.count_per_class_next_))
+            self.log_prev_probs_ = np.nan_to_num(np.log(self.count_per_class_prev_)) 
 
         return self
 

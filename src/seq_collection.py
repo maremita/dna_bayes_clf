@@ -87,7 +87,7 @@ class SeqClassCollection(UserList):
 
         with open(my_file, "r") as fh:
             #return dict(map(lambda x: (x[0], x[1]), (line.rstrip("\n").split(sep)
-            return dict(map(lambda x: (x[0], x[1]), (re.split(r'[\t|,|;|\s]', line.rstrip("\n"))
+            return dict(map(lambda x: (x[0], x[1]), (re.split(r'[\t,;\s]', line.rstrip("\n"))
                         for line in fh if not line.startswith("#"))))
 
 
