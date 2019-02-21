@@ -2,7 +2,7 @@ from os.path import splitext
 import re
 from collections import UserList
 from Bio import SeqIO
-
+from Bio.SeqRecord import SeqRecord
 
 __all__ = ['SeqClassCollection']
 
@@ -81,7 +81,6 @@ class SeqClassCollection(UserList):
 
         return list(seqRec for seqRec in SeqIO.parse(my_file, ext))
 
-
     @classmethod
     def read_class_file(cls, my_file):
 
@@ -89,6 +88,29 @@ class SeqClassCollection(UserList):
             #return dict(map(lambda x: (x[0], x[1]), (line.rstrip("\n").split(sep)
             return dict(map(lambda x: (x[0], x[1]), (re.split(r'[\t,;\s]', line.rstrip("\n"))
                         for line in fh if not line.startswith("#"))))
+
+    def get_fragments(self, size, step=1):
+ 
+        if step < 1:
+            print("do_fragment step parameter should be sup to 1")
+            step = 1
+
+        new_data = []
+
+        for seqRec in self.data:
+            sequence = seqRec.seq
+ 
+            i = 0
+            while i < (len(sequence) - size + 1):
+                fragment = sequence[i:i + size]
+
+                frgRec = SeqRecord(fragment, id=seqRec.id+"_"+str(i))
+                frgRec.seqParent = seqRec.id
+                frgRec.target = seqRec.target
+                new_data.append(frgRec)
+                i += step
+
+        return self.__class__(new_data)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
-from src import seq_collection
-from src import kmers
+import src.evaluation as ev 
 from src import bayes
-from src import utils
 
 import sys
 import json
@@ -15,7 +13,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
-from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import cross_validate, cross_val_score, StratifiedKFold
 
 from sklearn.linear_model import LogisticRegression
@@ -25,44 +22,7 @@ from sklearn.svm import SVC
 from sklearn.preprocessing import MinMaxScaler
 
 __author__ = "amine"
-__version__ = "0.2"
-
-
-def seq_dataset_construction(seq_file, cls_file, k_main, k_estim,
-        random_state=None, verbose=False):
-
-    data_seqs = seq_collection.SeqClassCollection((seq_file, cls_file))
-
-    # Split sequences for estimation and cv steps
-    seq_ind = list(i for i in range(0,len(data_seqs)))
-    a, b = next(StratifiedShuffleSplit(n_splits=1, test_size=0.1, random_state=random_state).split(seq_ind, data_seqs.targets))
-
-    seq_cv = data_seqs[list(a)]
-    seq_estim = data_seqs[list(b)]
-
-    # Construct the dataset for alpha  estimation
-    seq_estim_data = kmers.FullKmersCollection(seq_estim, k=k_estim).data
-    seq_estim_targets = seq_estim.targets
-
-    # Construct the data for cross-validation
-    seq_cv_data = kmers.FullKmersCollection(seq_cv, k=k_main).data
-    seq_cv_targets = seq_cv.targets
-
-    return seq_cv_data, seq_cv_targets, seq_estim_data, seq_estim_targets
-
-
-def kmer_dataset_construction(k_main, k_estim,
-        alphabet='ACGT', verbose=False):
-
-    # Get kmer word list
-    all_words = utils.generate_all_words(alphabet, k_main)
-    all_words_data = kmers.FullKmersCollection(all_words, k=k_estim).data
-
-    # Get kmer word for backoff
-    all_backs = utils.generate_all_words(alphabet, k_main-1)
-    all_backs_data = kmers.FullKmersCollection(all_backs, k=k_estim).data
-
-    return all_words_data, all_backs_data
+__version__ = "0.3"
 
 
 def clf_evaluation(classifiers, X, y, cv_iter, scoring="f1_weighted",
@@ -103,10 +63,10 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim,
     
         if verbose: print("\nProcessing k_main={}".format(k_main))
         if verbose: print("Dataset construction step")
-        seq_cv_X, seq_cv_y, seq_estim_X, seq_estim_y = seq_dataset_construction(seq_file, cls_file, k_main, k_estim)
+        seq_cv_X, seq_cv_y, seq_estim_X, seq_estim_y = ev.seq_dataset_construction(seq_file, cls_file, k_main, k_estim)
 
         if verbose: print("Kmer word dataset construction step")
-        all_words_data, all_backs_data = kmer_dataset_construction(k_main, k_estim)
+        all_words_data, all_backs_data = ev.kmer_dataset_construction(k_main, k_estim, alphabet='ACGT')
 
         if verbose: print("Alpha estimation from sequence dataset for NB Multinomial")
         a_mnom, a_mnom_y = bayes.Bayesian_MultinomialNB.fit_alpha_with_markov(seq_estim_X, seq_estim_y, all_words_data, None)
@@ -129,7 +89,7 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim,
                 9: [SVC(C=1, kernel="linear"), {'scale_X':False}, "Linear SVC"]
                }
 
-        k_scores[k_main] = clf_evaluation(classifiers, seq_cv_X, seq_cv_y, cv_iter,
+        k_scores[str(k_main)] = clf_evaluation(classifiers, seq_cv_X, seq_cv_y, cv_iter,
                 scoring=scoring, random_state=random_state, verbose=verbose)
 
     return k_scores 
@@ -148,7 +108,7 @@ def ndarrays_tolists(obj):
     return new_obj
 
 
-def rearrage_data_struct(data):
+def rearrange_data_struct(data):
     new_data = defaultdict(dict)
     
     for k in data:
@@ -189,7 +149,7 @@ def make_figure(scores, clfNames, kList, jsonFile, verbose=True):
             axs[ind].set_ylabel('F1 weighted')
         if ind >= 5:
             axs[ind].set_xlabel('K length')
-    
+ 
     plt.suptitle(fig_title)
     plt.savefig(fig_file)
     plt.show()
@@ -201,8 +161,8 @@ if __name__ == "__main__":
     ./eval_complete_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01.json
     """
 
-    k_main_list = list(range(4,10))
-    #k_main_list = [4]
+    #k_main_list = list(range(4,10))
+    k_main_list = [4,5,6]
     k_estim = 2
     rs = 0  # random_state
     verbose = True
@@ -242,5 +202,5 @@ if __name__ == "__main__":
     else:
        the_scores = json.load(open(scores_file, "r"))
 
-    the_scores = rearrage_data_struct(the_scores)
+    the_scores = rearrange_data_struct(the_scores)
     make_figure(the_scores, clf_names, k_main_list, scores_file, verbose)
