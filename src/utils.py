@@ -1,5 +1,7 @@
 import math
 from itertools import product
+from collections import defaultdict
+
 import numpy as np
 
 __all__ = ['check_alpha','get_index_from_kmer', 'get_kmer_from_index', 'compute_backoff_words']
@@ -84,4 +86,27 @@ def compute_backoff_words(X):
 
 def generate_all_words(alphabet, k):
     return ["".join(t) for t in product(alphabet, repeat=k)]
+
+
+def ndarrays_tolists(obj):
+    new_obj = dict()
+
+    for key in obj:
+        if isinstance(obj[key], np.ndarray):
+            new_obj[key] = obj[key].tolist()
+
+        else:
+            new_obj[key] = obj[key]
+
+    return new_obj
+
+
+def rearrange_data_struct(data):
+    new_data = defaultdict(dict)
+    
+    for k in data:
+        for algo in data[k]:
+            new_data[algo][k] = data[k][algo]
+
+    return new_data
 

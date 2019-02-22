@@ -2,16 +2,12 @@
 
 import src.evaluation as ev 
 from src import bayes
+from src import utils
 
 import sys
 import json
 import os.path
-from collections import defaultdict
 from pprint import pprint
-
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 from sklearn.model_selection import cross_validate, cross_val_score, StratifiedKFold
 
@@ -47,7 +43,7 @@ def clf_evaluation(classifiers, X, y, cv_iter, scoring="f1_weighted",
         if verbose: print("Evaluating {}".format(clf_dscp))
 
         #scores_tmp = cross_validate(classifier, the_X, y, cv=skf, scoring=scoring, return_train_score=True)
-        #scores[clf_dscp] = ndarrays_tolists(scores_tmp)
+        #scores[clf_dscp] = utils.ndarrays_tolists(scores_tmp)
         scores_tmp = cross_val_score(classifier, the_X, y, cv=skf, scoring=scoring)
         scores[clf_dscp] = [scores_tmp.mean(), scores_tmp.std()]
 
@@ -63,7 +59,7 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim,
     
         if verbose: print("\nProcessing k_main={}".format(k_main))
         if verbose: print("Dataset construction step")
-        seq_cv_X, seq_cv_y, seq_estim_X, seq_estim_y = ev.seq_dataset_construction(seq_file, cls_file, k_main, k_estim)
+        seq_cv_X, seq_cv_y, seq_estim_X, seq_estim_y = ev.seq_dataset_construction(seq_file, cls_file, 0.1, k_main, k_estim)
 
         if verbose: print("Kmer word dataset construction step")
         all_words_data, all_backs_data = ev.kmer_dataset_construction(k_main, k_estim, alphabet='ACGT')
@@ -93,66 +89,6 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim,
                 scoring=scoring, random_state=random_state, verbose=verbose)
 
     return k_scores 
-
-
-def ndarrays_tolists(obj):
-    new_obj = dict()
-
-    for key in obj:
-        if isinstance(obj[key], np.ndarray):
-            new_obj[key] = obj[key].tolist()
-
-        else:
-            new_obj[key] = obj[key]
-
-    return new_obj
-
-
-def rearrange_data_struct(data):
-    new_data = defaultdict(dict)
-    
-    for k in data:
-        for algo in data[k]:
-            new_data[algo][k] = data[k][algo]
-
-    return new_data
-
-
-def make_figure(scores, clfNames, kList, jsonFile, verbose=True):
-    if verbose: print("generating a figure")
-    
-    fig_file = os.path.splitext(jsonFile)[0] + ".png"
-    fig_title = os.path.splitext((os.path.basename(jsonFile)))[0]
-    
-    cmap = cm.get_cmap('tab20')
-    colors = [cmap(j/10) for j in range(0,10)] 
-
-    f, axs = plt.subplots(2, 5, figsize=(22,10))
-    axs = np.concatenate(axs)
-    #axs = list(zip(axs,clf_symbs))
-    width = 0.45
-
-    for ind, algo in enumerate(scores):
-        means = np.array([scores[algo][str(k)][0] for k in kList])
-        stds = np.array([scores[algo][str(k)][1] for k in kList])
-
-        #axs[ind].bar(kList, means, width, yerr=stds)
-        
-        axs[ind].fill_between(kList, means-stds, means+stds, alpha=0.1, color=colors[ind])
-        axs[ind].plot(kList, means, color=colors[ind])
-
-        axs[ind].set_title(clfNames[algo])
-        axs[ind].set_ylim([0,1.1])
-        axs[ind].grid()
-        
-        if ind == 0 or ind == 5:
-            axs[ind].set_ylabel('F1 weighted')
-        if ind >= 5:
-            axs[ind].set_xlabel('K length')
- 
-    plt.suptitle(fig_title)
-    plt.savefig(fig_file)
-    plt.show()
 
 
 if __name__ == "__main__":
@@ -202,5 +138,6 @@ if __name__ == "__main__":
     else:
        the_scores = json.load(open(scores_file, "r"))
 
-    the_scores = rearrange_data_struct(the_scores)
-    make_figure(the_scores, clf_names, k_main_list, scores_file, verbose)
+    the_scores = utils.rearrange_data_struct(the_scores)
+    ev.make_figure(the_scores, clf_names, k_main_list, scores_file, verbose)
+
