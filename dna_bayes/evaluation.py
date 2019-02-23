@@ -1,6 +1,6 @@
-from src import seq_collection
-from src import kmers
-from src import utils
+from dna_bayes import seq_collection
+from dna_bayes import kmers
+from dna_bayes import utils
 
 import os.path
 

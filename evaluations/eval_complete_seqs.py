@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import src.evaluation as ev 
-from src import bayes
-from src import utils
+import dna_bayes.evaluation as ev 
+from dna_bayes import bayes
+from dna_bayes import utils
 
 import sys
 import json
@@ -18,7 +18,6 @@ from sklearn.svm import SVC
 from sklearn.preprocessing import MinMaxScaler
 
 __author__ = "amine"
-__version__ = "0.3"
 
 
 def clf_evaluation(classifiers, X, y, cv_iter, scoring="f1_weighted",
@@ -71,18 +70,18 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim,
         a_mkov, a_mkov_y = bayes.Bayesian_MarkovModel.fit_alpha_with_markov(seq_estim_X, seq_estim_y, all_words_data, all_backs_data)
 
         classifiers = {
-                0: [bayes.MLE_MultinomialNB(priors=priors), {}, "MLE Multinomial NBayes"],
-                1: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-10), {'scale_X':False}, "Bayesian Multinomial NBayes with alpha=1e-10"],
-                2: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), {}, "Bayesian Multinomial NBayes with alpha=1"],
-                3: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=a_mnom, alpha_classes=a_mnom_y), {}, "Bayesian Multinomial NBayes with estimated alpha"],
+                #0: [bayes.MLE_MultinomialNB(priors=priors), {}, "MLE Multinomial NBayes"],
+                1: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-10), {}, "Bayesian Multinomial NBayes with alpha=1e-10"],
+                #2: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), {}, "Bayesian Multinomial NBayes with alpha=1"],
+                #3: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=a_mnom, alpha_classes=a_mnom_y), {}, "Bayesian Multinomial NBayes with estimated alpha"],
 
-                4: [bayes.MLE_MarkovModel(priors=priors), {}, "MLE Markov model"],
-                5: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-10), {}, "Bayesian Markov model with alpha=1e-10"],
-                6: [bayes.Bayesian_MarkovModel(priors=priors, alpha=a_mkov, alpha_classes=a_mkov_y), {}, "Bayesian Markov model with estimated alpha"],
+                #4: [bayes.MLE_MarkovModel(priors=priors), {}, "MLE Markov model"],
+                #5: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-10), {}, "Bayesian Markov model with alpha=1e-10"],
+                #6: [bayes.Bayesian_MarkovModel(priors=priors, alpha=a_mkov, alpha_classes=a_mkov_y), {}, "Bayesian Markov model with estimated alpha"],
 
-                7: [GaussianNB(), {'scale_X':False}, "Gaussian Naive Bayes"],
-                8: [LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=400), {'scale_X':False}, "Logistic Regression"],
-                9: [SVC(C=1, kernel="linear"), {'scale_X':False}, "Linear SVC"]
+                #7: [GaussianNB(), {}, "Gaussian Naive Bayes"],
+                #8: [LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=400), {}, "Logistic Regression"],
+                #9: [SVC(C=1, kernel="linear"), {}, "Linear SVC"]
                }
 
         k_scores[str(k_main)] = clf_evaluation(classifiers, seq_cv_X, seq_cv_y, cv_iter,
@@ -94,7 +93,7 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim,
 if __name__ == "__main__":
  
     """
-    ./eval_complete_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01.json
+    ./eval_complete_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01_test.json
     """
 
     #k_main_list = list(range(4,10))
@@ -106,7 +105,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) != 4:
         print("3 arguments are needed!")
-        sys.exist()
+        sys.exit()
 
     seq_file = sys.argv[1]
     cls_file = sys.argv[2]

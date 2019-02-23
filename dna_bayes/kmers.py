@@ -1,6 +1,8 @@
-from .seq_collection import SeqClassCollection
 from .utils import get_index_from_kmer
+
 import re
+from .seq_collection import SeqClassCollection
+
 import numpy as np
 
 

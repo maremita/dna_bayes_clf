@@ -1,8 +1,10 @@
 from .utils import compute_backoff_words, check_alpha
 
 from abc import ABC, abstractmethod
+
 import numpy as np
 from scipy.special import logsumexp, gammaln
+
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-import src.evaluation as ev 
-from src import kmers
-from src import bayes
-from src import utils
+import dna_bayes.evaluation as ev 
+from dna_bayes import kmers
+from dna_bayes import bayes
+from dna_bayes import utils
 
 import sys
 import json
@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) != 4:
         print("3 arguments are needed!")
-        sys.exist()
+        sys.exit()
 
     seq_file = sys.argv[1]
     cls_file = sys.argv[2]

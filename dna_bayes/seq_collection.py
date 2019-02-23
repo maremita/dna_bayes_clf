@@ -1,6 +1,7 @@
 from os.path import splitext
 import re
 from collections import UserList
+
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
