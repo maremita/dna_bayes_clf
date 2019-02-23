@@ -3,6 +3,7 @@
 import src.evaluation as ev 
 from src import kmers
 from src import bayes
+from src import utils
 
 import sys
 import json
@@ -12,45 +13,51 @@ from pprint import pprint
 
 import numpy as np
 
+from sklearn.base import clone
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import f1_score
 
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
 
-def clf_evaluation_with_fragments(classifiers, data_seqs, nb_iter, scorer,
-        random_state=None, verbose=False):
 
-    scores_iter = defaultdict(list)
+def clf_evaluation_with_fragments(classifiers, data_seqs, k, frgmt_size,
+        nb_iter, scorer, random_state=None, verbose=False):
+
+    scores_iter = defaultdict(lambda: [0]*nb_iter)
     final_scores = dict()
 
     if verbose: print("Validation step")
     
-    y = np.asarray(seq_cv.targets)
+    y = np.asarray(data_seqs.targets)
     
     seq_ind = list(i for i in range(0,len(data_seqs)))
     sss = StratifiedShuffleSplit(n_splits=nb_iter, test_size=0.5)
 
     # Construct train and test dataset
     for ind_iter, (train_ind, test_ind) in enumerate(sss.split(seq_ind, y)):
-        if verbose: print("Iteration {}".format(ind_iter))
+        if verbose: print("\nIteration {}\n".format(ind_iter))
 
-        D_train, D_test = data_seqs[train_ind], data_seqs[test_ind]
+        D_train, D_test = data_seqs[train_ind.tolist()], data_seqs[test_ind.tolist()]
         y_train, _ = y[train_ind], y[test_ind]
 
         # construct X_train
-        X_train = kmers.FullKmersCollection(D_train, k=k_main).data
+        X_train = kmers.FullKmersCollection(D_train, k=k).data
 
         # construct fragment dataset (X_test)
-        D_test = D_test.get_fragments(size, step=int(size/2))
-        X_test = kmers.FullKmersCollection(D_test, k=k_main).data
+        D_test = D_test.get_fragments(frgmt_size, step=int(frgmt_size/2))
+        X_test = kmers.FullKmersCollection(D_test, k=k).data
         y_test = np.asarray(D_test.targets)
-        
+
         for clf_ind in classifiers:
             classifier, options, clf_dscp = classifiers[clf_ind]
-
-            if verbose: print("Evaluating {}".format(clf_dscp))
-            y_pred = classifier.fit(X_train, y_train).predict(X_test)
+ 
+            new_clf = clone(classifier)
+            if verbose: print("Evaluating {}\r".format(clf_dscp))
+            y_pred = new_clf.fit(X_train, y_train).predict(X_test)
             
-            scores_iter[clf_dscp].append(scorer(y_test, y_pred, average="weighted"))
+            scores_iter[clf_dscp][ind_iter] = scorer(y_test, y_pred, average="weighted")
        
     for clf_dscp in scores_iter:
         scores = np.asarray(scores_iter[clf_dscp]) 
@@ -60,7 +67,7 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, nb_iter, scorer,
 
 
 def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, k_estim,
-        cv_iter, scorer, random_state=None, verbose=True):
+        frgmt_size, nb_iter, scorer, random_state=None, verbose=True):
 
     priors="uniform"
     k_scores = dict()
@@ -71,7 +78,8 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, k_estim,
         if verbose: print("\nProcessing k_main={}".format(k_main))
         if verbose: print("Dataset construction step")
 
-        seq_cv, seq_estim = ev.construct_split_collection(seq_file, cls_file, estim_size)
+        seq_cv, seq_estim = ev.construct_split_collection(seq_file, cls_file,
+                estim_size, random_state=random_state)
 
         # Construct the dataset for alpha  estimation
         seq_estim_X = kmers.FullKmersCollection(seq_estim, k=k_estim).data
@@ -101,8 +109,9 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, k_estim,
                 9: [SVC(C=1, kernel="linear"), {}, "SK_Linear_SVC"]
                }
 
-        k_scores[str(k_main)] = clf_evaluation_with_fragments(classifiers, seq_cv, cv_iter,
-                scorer, random_state=random_state, verbose=verbose)
+        k_scores[str(k_main)] = clf_evaluation_with_fragments(classifiers,
+                seq_cv, k_main, frgmt_size, nb_iter, scorer,
+                random_state=random_state, verbose=verbose)
 
     return k_scores 
 
@@ -110,7 +119,7 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, k_estim,
 if __name__ == "__main__":
  
     """
-    ./eval_fragment_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01_frgmt.json
+    ./eval_fragment_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01_frgmt_250.json
     """
 
     if len(sys.argv) != 4:
@@ -121,33 +130,35 @@ if __name__ == "__main__":
     cls_file = sys.argv[2]
     scores_file = sys.argv[3]
 
-    #k_main_list = list(range(4,10))
-    k_main_list = [4]
+    k_main_list = list(range(4,10))
+    #k_main_list = [4]
     k_estim = 2
-    rs = 0  # random_state
-    verbose = True
-    cv_iter = 5
+    fragment_size = 250
+    nb_iter = 5
     the_scorer = f1_score
 
-    clf_names = 
-            "MLE Multinomial NBayes":"MLE_MultinomNB",
-            "Bayesian Multinomial NBayes with alpha=1e-10":"BAY_MultinomNB_Alpha_1e-10",
-            "Bayesian Multinomial NBayes with alpha=1":"BAY_MultinomNB_Alpha_1",
-            "Bayesian Multinomial NBayes with estimated alpha":"BAY_MultinomNB_Alpha_estimated",
+    rs = 0  # random_state
+    verbose = True
 
-            "MLE Markov model":"MLE_Markov",
-            "Bayesian Markov model with alpha=1e-10":"BAY_Markov_Alpha_1e-10",
-            "Bayesian Markov model with estimated alpha":"BAY_Markov_Alpha_estimated",
+    clf_names = { 
+            "MLE_MultinomNB":"MLE_MultinomNB",
+            "BAY_MultinomNB_Alpha_1e-10":"BAY_MultinomNB_Alpha_1e-10",
+            "BAY_MultinomNB_Alpha_1":"BAY_MultinomNB_Alpha_1",
+            "BAY_MultinomNB_Alpha_estimated":"BAY_MultinomNB_Alpha_estimated",
 
-            "Gaussian Naive Bayes":"SK_Gaussian_NB",
-            "Logistic Regression":"SK_Logistic_Regression",
-            "Linear SVC":"SK_Linear_SVC"
+            "MLE_Markov":"MLE_Markov",
+            "BAY_Markov_Alpha_1e-10":"BAY_Markov_Alpha_1e-10",
+            "BAY_Markov_Alpha_estimated":"BAY_Markov_Alpha_estimated",
+
+            "SK_Gaussian_NB":"SK_Gaussian_NB",
+            "SK_Logistic_Regression":"SK_Logistic_Regression",
+            "SK_Linear_SVC":"SK_Linear_SVC"
             }
 
     if not os.path.isfile(scores_file):
-        the_scores = k_evaluation_with_fragments(seq_file, cls_file, k_main_list, k_estim, 
-                cv_iter, the_scorer, random_state=rs,
-                verbose=True)
+        the_scores = k_evaluation_with_fragments(seq_file, cls_file,
+                k_main_list, k_estim, fragment_size, nb_iter, the_scorer,
+                random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out: 
             json.dump(the_scores, fh_out, indent=2)
@@ -156,5 +167,5 @@ if __name__ == "__main__":
        the_scores = json.load(open(scores_file, "r"))
 
     the_scores = utils.rearrange_data_struct(the_scores)
-    pprint(the_scores)
-    #ev.make_figure(the_scores, clf_names, k_main_list, scores_file, verbose)
+    #pprint(the_scores)
+    ev.make_figure(the_scores, clf_names, k_main_list, scores_file, verbose)

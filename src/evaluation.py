@@ -11,7 +11,7 @@ import matplotlib.cm as cm
 from sklearn.model_selection import StratifiedShuffleSplit
 
 
-def construct_split_collection(seq_file, cls_file, estim_size):
+def construct_split_collection(seq_file, cls_file, estim_size, random_state=None):
 
     data_seqs = seq_collection.SeqClassCollection((seq_file, cls_file))
 
@@ -29,7 +29,7 @@ def construct_split_collection(seq_file, cls_file, estim_size):
 def seq_dataset_construction(seq_file, cls_file, estim_size, k_main, k_estim,
         random_state=None, verbose=False):
 
-    seq_cv, seq_estim = construct_split_collection(seq_file, cls_file, estim_size)
+    seq_cv, seq_estim = construct_split_collection(seq_file, cls_file, estim_size, random_state=random_state)
 
     # Construct the data for cross-validation
     seq_cv_data = kmers.FullKmersCollection(seq_cv, k=k_main).data
