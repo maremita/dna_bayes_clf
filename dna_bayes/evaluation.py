@@ -11,7 +11,15 @@ import matplotlib.cm as cm
 from sklearn.model_selection import StratifiedShuffleSplit
 
 
-def construct_split_collection(seq_file, cls_file, estim_size, random_state=None):
+def construct_Xy_data(seq_data, k):
+
+    X_data = kmers.FullKmersCollection(seq_data, k=k).data
+    y_data = np.asarray(seq_data.targets)
+
+    return X_data, y_data
+
+def construct_split_collection(seq_file, cls_file, estim_size,
+        random_state=None):
 
     data_seqs = seq_collection.SeqClassCollection((seq_file, cls_file))
 
@@ -29,17 +37,16 @@ def construct_split_collection(seq_file, cls_file, estim_size, random_state=None
 def seq_dataset_construction(seq_file, cls_file, estim_size, k_main, k_estim,
         random_state=None, verbose=False):
 
-    seq_cv, seq_estim = construct_split_collection(seq_file, cls_file, estim_size, random_state=random_state)
+    seq_cv, seq_estim = construct_split_collection(seq_file,
+            cls_file, estim_size, random_state=random_state)
 
     # Construct the data for cross-validation
-    seq_cv_data = kmers.FullKmersCollection(seq_cv, k=k_main).data
-    seq_cv_targets = seq_cv.targets
+    seq_cv_X, seq_cv_y = construct_Xy_data(seq_cv, k_main)
 
     # Construct the dataset for alpha  estimation
-    seq_estim_data = kmers.FullKmersCollection(seq_estim, k=k_estim).data
-    seq_estim_targets = seq_estim.targets
+    seq_estim_X, seq_estim_y = construct_Xy_data(seq_estim, k_estim)
 
-    return seq_cv_data, seq_cv_targets, seq_estim_data, seq_estim_targets
+    return seq_cv_X, seq_cv_y, seq_estim_X, seq_estim_y
 
 
 def kmer_dataset_construction(k_main, k_estim,
@@ -54,6 +61,27 @@ def kmer_dataset_construction(k_main, k_estim,
     all_backs_data = kmers.FullKmersCollection(all_backs, k=k_estim).data
 
     return all_words_data, all_backs_data
+
+
+def clfs_validation(classifiers, X, y, cv_iter, scoring="f1_weighted",
+        random_state=None, verbose=False):
+
+    scores = dict()
+
+    if verbose: print("Cross-Validation step")
+
+    skf = StratifiedKFold(n_splits=cv_iter, shuffle=False, 
+            random_state=random_state)
+
+    for clf_ind in classifiers:
+        classifier, clf_dscp = classifiers[clf_ind]
+
+        if verbose: print("Evaluating {}".format(clf_dscp))
+
+        scores_tmp = cross_val_score(classifier, X, y, cv=skf, scoring=scoring)
+        scores[clf_dscp] = [scores_tmp.mean(), scores_tmp.std()]               
+    
+    return scores
 
 
 def make_figure(scores, clfNames, kList, jsonFile, verbose=True):
@@ -75,12 +103,13 @@ def make_figure(scores, clfNames, kList, jsonFile, verbose=True):
         stds = np.array([scores[algo][str(k)][1] for k in kList])
 
         #axs[ind].bar(kList, means, width, yerr=stds)
-        
-        axs[ind].fill_between(kList, means-stds, means+stds, alpha=0.1, color=colors[ind])
+
+        axs[ind].fill_between(kList, means-stds, means+stds,
+                alpha=0.1, color=colors[ind])
         axs[ind].plot(kList, means, color=colors[ind])
 
         axs[ind].set_title(clfNames[algo])
-        axs[ind].set_ylim([0,1.1])
+        axs[ind].set_ylim([0, 1.1])
         axs[ind].grid()
         
         if ind == 0 or ind == 5:
@@ -92,3 +121,43 @@ def make_figure(scores, clfNames, kList, jsonFile, verbose=True):
     plt.savefig(fig_file)
     plt.show()
 
+
+def make_figure2(scores, kList, jsonFile, verbose=True):
+    if verbose: print("generating a figure")
+    
+    fig_file = os.path.splitext(jsonFile)[0] + ".png"
+    fig_title = os.path.splitext((os.path.basename(jsonFile)))[0]
+    
+    cmap = cm.get_cmap('tab10')
+    colors = [cmap(j/10) for j in range(0,10)] 
+
+    f, axs = plt.subplots(1, 5, figsize=(22,10))
+    #axs = np.concatenate(axs)
+    width = 0.45
+
+
+    for i, ratio in enumerate(scores):
+
+        for j, algo in enumerate(scores[ratio]):
+            means = np.array([scores[ratio][algo][str(k)][0] for k in kList])
+            stds = np.array([scores[ratio][algo][str(k)][1] for k in kList])
+
+            #axs[ind].bar(kList, means, width, yerr=stds)
+
+            axs[i].fill_between(kList, means-stds, means+stds,
+                    alpha=0.1, color=colors[j])
+            axs[i].plot(kList, means, label=algo, color=colors[j])
+
+        axs[i].set_title(ratio)
+        axs[i].set_ylim([0, 1.1])
+        axs[i].grid()
+        
+        if i == 0:
+            axs[i].set_ylabel('F1 weighted')
+        #if ind >= 5:
+        axs[i].set_xlabel('K length')
+
+    plt.legend() 
+    plt.suptitle(fig_title)
+    plt.savefig(fig_file)
+    plt.show()

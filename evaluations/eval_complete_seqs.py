@@ -20,7 +20,7 @@ from sklearn.preprocessing import MinMaxScaler
 __author__ = "amine"
 
 
-def clf_evaluation(classifiers, X, y, cv_iter, scoring="f1_weighted",
+def clfs_validation(classifiers, X, y, cv_iter, scoring="f1_weighted",
         random_state=None, verbose=False):
 
     scores = dict()
@@ -84,7 +84,7 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim,
                 #9: [SVC(C=1, kernel="linear"), {}, "Linear SVC"]
                }
 
-        k_scores[str(k_main)] = clf_evaluation(classifiers, seq_cv_X, seq_cv_y, cv_iter,
+        k_scores[str(k_main)] = clfs_validation(classifiers, seq_cv_X, seq_cv_y, cv_iter,
                 scoring=scoring, random_state=random_state, verbose=verbose)
 
     return k_scores 
