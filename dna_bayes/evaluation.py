@@ -131,7 +131,7 @@ def make_figure2(scores, kList, jsonFile, verbose=True):
     cmap = cm.get_cmap('tab10')
     colors = [cmap(j/10) for j in range(0,10)] 
 
-    f, axs = plt.subplots(1, 5, figsize=(22,10))
+    f, axs = plt.subplots(1, 5, figsize=(20,5))
     #axs = np.concatenate(axs)
     width = 0.45
 
