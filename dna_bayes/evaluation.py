@@ -18,6 +18,7 @@ def construct_Xy_data(seq_data, k):
 
     return X_data, y_data
 
+
 def construct_split_collection(seq_file, cls_file, estim_size,
         random_state=None):
 

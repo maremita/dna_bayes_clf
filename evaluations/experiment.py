@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-from src import seq_collection
-from src import kmers
-from src import bayes
+from dna_bayes import seq_collection
+from dna_bayes import kmers
+from dna_bayes import bayes
 
 import numpy as np
 from sklearn.naive_bayes import MultinomialNB
 
-cls_file = "data/viruses/HBV/HBV_geo.csv"
-seq_file = "data/viruses/HBV/HBV_geo.fasta"
+cls_file = "data/viruses/HBV01/class.csv"
+seq_file = "data/viruses/HBV01/data.fa"
 
 k = 6
 alpha = 1e-10

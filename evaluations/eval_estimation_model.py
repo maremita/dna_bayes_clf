@@ -18,7 +18,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score
 from sklearn.base import clone
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
 
 
 def clfs_validation_holdout(classifiers, X, y, test_size, scorer,
@@ -26,10 +26,14 @@ def clfs_validation_holdout(classifiers, X, y, test_size, scorer,
 
     scores = dict()
 
-    X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=random_state)
+    #X_train, X_test, y_train, y_test = train_test_split(
+    #        X, y, test_size=test_size, random_state=random_state)
 
-    y_uniq = np.unique(y_train)
+    a, b = next(StratifiedShuffleSplit(n_splits=1, test_size=test_size,
+        random_state=random_state).split(X, y))
+    
+    X_train = X[a]; y_train = y[a]
+    X_test = X[b]; y_test = y[b]
 
     for clf_ind in classifiers:
         classifier, clf_dscp = classifiers[clf_ind]
@@ -40,8 +44,7 @@ def clfs_validation_holdout(classifiers, X, y, test_size, scorer,
         new_clf.fit(X_train, y_train)
         y_pred = new_clf.predict(X_test)
 
-        score_tmp =  scorer(y_test, y_pred, labels=y_uniq,
-                average="weighted")
+        score_tmp =  scorer(y_test, y_pred, average="weighted")
         scores[clf_dscp] = score_tmp
 
     return scores
