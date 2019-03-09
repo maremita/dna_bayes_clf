@@ -11,12 +11,26 @@ import matplotlib.cm as cm
 from sklearn.model_selection import StratifiedShuffleSplit
 
 
-def construct_Xy_data(seq_data, k):
+def construct_Xy_data(seq_data, k, full_kmers=True):
 
-    X_data = kmers.FullKmersCollection(seq_data, k=k).data
+    if full_kmers:
+        X_data = kmers.FullKmersCollection(seq_data, k=k).data
+
+    else:
+        X_data = kmers.SeenKmersCollection(seq_data, k=k).data
+    
     y_data = np.asarray(seq_data.targets)
 
     return X_data, y_data
+
+
+def construct_kmers_data(seq_data, k, full_kmers=True):
+
+    if full_kmers:
+        return kmers.FullKmersCollection(seq_data, k=k)
+
+    else:
+        return kmers.SeenKmersCollection(seq_data, k=k)
 
 
 def construct_split_collection(seq_file, cls_file, estim_size,
@@ -35,17 +49,19 @@ def construct_split_collection(seq_file, cls_file, estim_size,
     return seq_cv, seq_estim
 
 
-def seq_dataset_construction(seq_file, cls_file, estim_size, k_main, k_estim,
-        random_state=None, verbose=False):
+def seq_dataset_construction(seq_file, cls_file, estim_size, k_main, 
+        k_estim, full_kmers=True, random_state=None, verbose=False):
 
     seq_cv, seq_estim = construct_split_collection(seq_file,
             cls_file, estim_size, random_state=random_state)
 
     # Construct the data for cross-validation
-    seq_cv_X, seq_cv_y = construct_Xy_data(seq_cv, k_main)
+    seq_cv_X, seq_cv_y = construct_Xy_data(seq_cv, k_main,
+            full_kmers=full_kmers)
 
     # Construct the dataset for alpha  estimation
-    seq_estim_X, seq_estim_y = construct_Xy_data(seq_estim, k_estim)
+    seq_estim_X, seq_estim_y = construct_Xy_data(seq_estim, k_estim,
+            full_kmers=full_kmers)
 
     return seq_cv_X, seq_cv_y, seq_estim_X, seq_estim_y
 
@@ -85,7 +101,7 @@ def clfs_validation(classifiers, X, y, cv_iter, scoring="f1_weighted",
     return scores
 
 
-def make_figure(scores, clfNames, kList, jsonFile, verbose=True):
+def make_figure(scores, kList, jsonFile, verbose=True):
     if verbose: print("generating a figure")
     
     fig_file = os.path.splitext(jsonFile)[0] + ".png"
@@ -109,7 +125,7 @@ def make_figure(scores, clfNames, kList, jsonFile, verbose=True):
                 alpha=0.1, color=colors[ind])
         axs[ind].plot(kList, means, color=colors[ind])
 
-        axs[ind].set_title(clfNames[algo])
+        axs[ind].set_title(algo)
         axs[ind].set_ylim([0, 1.1])
         axs[ind].grid()
         

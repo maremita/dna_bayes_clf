@@ -19,7 +19,7 @@ class BaseBayesClassification(ABC, BaseEstimator, ClassifierMixin):
     Do not instantiate this class
     """
 
-    def _class_prior_fit(self, X, y):
+    def _class_prior_fit(self, y):
         """
         """
         
@@ -151,7 +151,7 @@ class BaseMultinomialNB(BaseBayesClassification):
         """
 
         # fit the priors
-        self._class_prior_fit(X, y)
+        self._class_prior_fit(y)
 
         self.v_size_ = X.shape[1]
 
@@ -231,16 +231,6 @@ class Bayesian_MultinomialNB(BaseMultinomialNB):
         self.alpha = alpha
         self.alpha_classes = alpha_classes 
 
-    #def fit_alpha(self, alpha=1e-10, X_estim=None, y_estim=None, 
-    #        kmers=None, kmers_backs=None):
-
-    #    if not(X_estim is None or y_estim is None or kmers is None):
-    #        self.alpha, self.alpha_classes = self.fit_alpha_with_markov(X_estim, y_estim, kmers, kmers_backs)
-
-    #    # validate alpha
-    #    else:
-    #        self.alpha = check_alpha(alpha)
-
     def fit(self, X, y):
         y = np.asarray(y)
         self._initial_fit(X, y)
@@ -266,10 +256,15 @@ class Bayesian_MultinomialNB(BaseMultinomialNB):
         return self
 
     @staticmethod
-    def fit_alpha_with_markov(X_estim, y_estim, kmers, kmers_backs):
-        #estimation_model = Bayesian_MarkovModel(priors="ones").fit(X_estim, y_estim)
-        estimation_model = MLE_MarkovModel(priors="ones").fit(X_estim, y_estim)
-        #estimation_model = Bayesian_MultinomialNaiveBayes(priors="ones").fit(X_estim, y_estim)
+    def fit_alpha_with_markov(X_estim, y_estim, kmers, v):
+        #estimation_model = Bayesian_MarkovModel(priors="ones")\
+        #        .fit(X_estim, y_estim, v=v)
+
+        estimation_model = MLE_MarkovModel(priors="ones")\
+                .fit(X_estim, y_estim, v=v)
+
+        #estimation_model = Bayesian_MultinomialNaiveBayes(priors="ones")\
+        #        .fit(X_estim[:, 0:v], y_estim)
 
         # get probabilities of kmer words
         prob_kmers = estimation_model.predict_proba(kmers)
@@ -295,20 +290,24 @@ class BaseMarkovModel(BaseBayesClassification):
         """
 
         # fit the priors
-        self._class_prior_fit(X, y)
+        self._class_prior_fit(y)
  
-        self.v_size_ = X.shape[1]
+        X_next = X[:, 0:self.v_size_]
+        X_prev = X[:, self.v_size_:]
 
         # Compute y per target value
         self.count_per_class_next_ = np.zeros((self.n_classes_, self.v_size_)) 
+        self.count_per_class_prev_ = np.zeros((self.n_classes_, X_prev.shape[1])) 
 
         for ind in range(self.n_classes_):
-            X_class = X[y == self.classes_[ind]]
+            X_next_class = X_next[y == self.classes_[ind]]
+            X_prev_class = X_prev[y == self.classes_[ind]]
             # sum word by word
-            self.count_per_class_next_[ind, :] = np.sum(X_class, axis=0)
+            self.count_per_class_next_[ind, :] = np.sum(X_next_class, axis=0)
+            self.count_per_class_prev_[ind, :] = np.sum(X_prev_class, axis=0)
 
-        # compute y and Y for backoff kmer word
-        self.count_per_class_prev_ = compute_backoff_words(self.count_per_class_next_)
+        # Compute y and Y for backoff kmer word
+        #self.count_per_class_prev_ = compute_backoff_words(self.count_per_class_next_)
 
         return self
  
@@ -323,11 +322,14 @@ class BaseMarkovModel(BaseBayesClassification):
         predict_proba and predict_log_proba. 
         """
 
-        # compute backoff words for X
-        X_back = compute_backoff_words(X)
+        X_next = X[:, 0:self.v_size_]
+        X_prev = X[:, self.v_size_:]
 
-        log_dot_next = np.dot(X, self.log_next_probs_.T)
-        log_dot_prev = np.dot(X_back, self.log_prev_probs_.T)
+        # compute backoff words for X
+        #X_back = compute_backoff_words(X)
+
+        log_dot_next = np.dot(X_next, self.log_count_next_.T)
+        log_dot_prev = np.dot(X_prev, self.log_count_prev_.T)
 
         return log_dot_next - log_dot_prev + self.log_class_priors_
 
@@ -339,13 +341,14 @@ class MLE_MarkovModel(BaseMarkovModel):
     def __init__(self, priors=None):
         self.priors = priors
 
-    def fit(self, X, y):
+    def fit(self, X, y, **kwargs):
+        self.v_size_ = kwargs['v']
         y = np.asarray(y)
         self._initial_fit(X, y)
 
         with np.errstate(divide='ignore', invalid='ignore'):
-            self.log_next_probs_ = np.nan_to_num(np.log(self.count_per_class_next_))
-            self.log_prev_probs_ = np.nan_to_num(np.log(self.count_per_class_prev_)) 
+            self.log_count_next_ = np.nan_to_num(np.log(self.count_per_class_next_))
+            self.log_count_prev_ = np.nan_to_num(np.log(self.count_per_class_prev_)) 
 
         return self
 
@@ -354,22 +357,13 @@ class Bayesian_MarkovModel(BaseMarkovModel):
     """
     """
 
-    def __init__(self, priors=None, alpha=None, alpha_classes=None): 
+    def __init__(self, priors=None, alpha=1, alpha_classes=None): 
         self.priors = priors
         self.alpha = alpha
         self.alpha_classes = alpha_classes 
 
-    #def fit_alpha(self, alpha=1e-10, X_estim=None, y_estim=None, 
-    #        kmers=None, kmers_backs=None):
-
-    #    if not(X_estim is None or y_estim is None or kmers is None):
-    #        self.alpha, self.alpha_classes = self.fit_alpha_with_markov(X_estim, y_estim, kmers, kmers_backs)
-
-    #    # validate alpha
-    #    else:
-    #        self.alpha = check_alpha(alpha)
-
-    def fit(self, X, y):
+    def fit(self, X, y, **kwargs):
+        self.v_size_ = kwargs['v']
         y = np.asarray(y)
         self._initial_fit(X, y)
 
@@ -387,14 +381,14 @@ class Bayesian_MarkovModel(BaseMarkovModel):
             alpha_main = self.alpha[0]
             alpha_back = self.alpha[1]
 
-        self.log_next_probs_ = np.log(self.count_per_class_next_ + alpha_main) 
-        self.log_prev_probs_ = np.log(self.count_per_class_prev_ + alpha_back)
+        self.log_count_next_ = np.log(self.count_per_class_next_ + alpha_main) 
+        self.log_count_prev_ = np.log(self.count_per_class_prev_ + alpha_back)
 
         return self
 
     @staticmethod
-    def fit_alpha_with_markov(X_estim, y_estim, kmers, kmers_backs):
-        estimation_model = MLE_MarkovModel(priors="ones").fit(X_estim, y_estim)
+    def fit_alpha_with_markov(X_estim, y_estim, kmers, kmers_backs, v):
+        estimation_model = MLE_MarkovModel(priors="ones").fit(X_estim, y_estim, v=v)
 
         # get probabilities of kmer words
         prob_kmers = estimation_model.predict_proba(kmers)

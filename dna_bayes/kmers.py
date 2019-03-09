@@ -104,7 +104,7 @@ class SeenKmersCollection(object):
 
     def _construct_data(self):
         # Get Kmers list
-        self.kmers_list = self.dict_data.keys()
+        self.kmers_list = list(self.dict_data)
         self.v_size = len(self.kmers_list)
 
         # Convert to numpy
@@ -112,3 +112,44 @@ class SeenKmersCollection(object):
 
         return self
 
+
+class GivenKmersCollection(object):
+
+    def __init__(self, sequences, kmers_list, alphabet="ACGT"):
+        self.alphabet = alphabet
+        self.kmers_list = kmers_list
+        self.k = len(self.kmers_list[0])
+        #
+        self.ids = []
+        self.v_size = len(self.kmers_list)
+        self.data = np.zeros((len(sequences), self.v_size))
+        #
+        if isinstance(sequences, SeqClassCollection):
+            self._compute_kmers_from_collection(sequences)
+
+        else:
+            self._compute_kmers_from_strings(sequences)
+
+    def _compute_kmers_of_sequence(self, sequence, ind): 
+        for i in range(len(sequence) - self.k + 1):
+            kmer = sequence[i:i + self.k]
+
+            if kmer in self.kmers_list:
+                ind_kmer = self.kmers_list.index(kmer) 
+                self.data[ind][ind_kmer] += 1
+
+        return self
+ 
+    def _compute_kmers_from_collection(self, sequences):
+        for i, seq in enumerate(sequences):
+            self._compute_kmers_of_sequence(seq.seq._data, i)
+            self.ids.append(seq.id)
+
+        return self
+
+    def _compute_kmers_from_strings(self, sequences):
+        for i, seq in enumerate(sequences):
+            self._compute_kmers_of_sequence(seq, i)
+            self.ids.append(i)
+
+        return self

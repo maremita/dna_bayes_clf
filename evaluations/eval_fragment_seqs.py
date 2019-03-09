@@ -51,7 +51,7 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, k, frgmt_size,
         y_test = np.asarray(D_test.targets)
 
         for clf_ind in classifiers:
-            classifier, options, clf_dscp = classifiers[clf_ind]
+            classifier, clf_dscp = classifiers[clf_ind]
  
             new_clf = clone(classifier)
             if verbose: print("Evaluating {}\r".format(clf_dscp))
@@ -95,18 +95,18 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, k_estim,
         a_mkov, a_mkov_y = bayes.Bayesian_MarkovModel.fit_alpha_with_markov(seq_estim_X, seq_estim_y, all_words_data, all_backs_data)
 
         classifiers = {
-                0: [bayes.MLE_MultinomialNB(priors=priors), {}, "MLE_MultinomNB"],
-                1: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-10), {}, "BAY_MultinomNB_Alpha_1e-10"],
-                2: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), {}, "BAY_MultinomNB_Alpha_1"],
-                3: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=a_mnom, alpha_classes=a_mnom_y), {}, "BAY_MultinomNB_Alpha_estimated"],
+                0: [bayes.MLE_MultinomialNB(priors=priors), "MLE_MultinomNB"],
+                1: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-10), "BAY_MultinomNB_Alpha_1e-10"],
+                2: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), "BAY_MultinomNB_Alpha_1"],
+                3: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=a_mnom, alpha_classes=a_mnom_y), "BAY_MultinomNB_Alpha_estimated"],
 
-                4: [bayes.MLE_MarkovModel(priors=priors), {}, "MLE_Markov"],
-                5: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-10), {}, "BAY_Markov_Alpha_1e-10"],
-                6: [bayes.Bayesian_MarkovModel(priors=priors, alpha=a_mkov, alpha_classes=a_mkov_y), {}, "BAY_Markov_Alpha_estimated"],
+                4: [bayes.MLE_MarkovModel(priors=priors), "MLE_Markov"],
+                5: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-10), "BAY_Markov_Alpha_1e-10"],
+                6: [bayes.Bayesian_MarkovModel(priors=priors, alpha=a_mkov, alpha_classes=a_mkov_y), "BAY_Markov_Alpha_estimated"],
 
-                7: [GaussianNB(), {}, "SK_Gaussian_NB"],
-                8: [LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=400), {}, "SK_Logistic_Regression"],
-                9: [SVC(C=1, kernel="linear"), {}, "SK_Linear_SVC"]
+                7: [GaussianNB(), "SK_Gaussian_NB"],
+                8: [LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=400), "SK_Logistic_Regression"],
+                9: [SVC(C=1, kernel="linear"), "SK_Linear_SVC"]
                }
 
         k_scores[str(k_main)] = clf_evaluation_with_fragments(classifiers,
@@ -140,21 +140,6 @@ if __name__ == "__main__":
     rs = 0  # random_state
     verbose = True
 
-    clf_names = { 
-            "MLE_MultinomNB":"MLE_MultinomNB",
-            "BAY_MultinomNB_Alpha_1e-10":"BAY_MultinomNB_Alpha_1e-10",
-            "BAY_MultinomNB_Alpha_1":"BAY_MultinomNB_Alpha_1",
-            "BAY_MultinomNB_Alpha_estimated":"BAY_MultinomNB_Alpha_estimated",
-
-            "MLE_Markov":"MLE_Markov",
-            "BAY_Markov_Alpha_1e-10":"BAY_Markov_Alpha_1e-10",
-            "BAY_Markov_Alpha_estimated":"BAY_Markov_Alpha_estimated",
-
-            "SK_Gaussian_NB":"SK_Gaussian_NB",
-            "SK_Logistic_Regression":"SK_Logistic_Regression",
-            "SK_Linear_SVC":"SK_Linear_SVC"
-            }
-
     if not os.path.isfile(scores_file):
         the_scores = k_evaluation_with_fragments(seq_file, cls_file,
                 k_main_list, k_estim, fragment_size, nb_iter, the_scorer,
@@ -168,4 +153,4 @@ if __name__ == "__main__":
 
     the_scores = utils.rearrange_data_struct(the_scores)
     #pprint(the_scores)
-    ev.make_figure(the_scores, clf_names, k_main_list, scores_file, verbose)
+    ev.make_figure(the_scores, k_main_list, scores_file, verbose)
