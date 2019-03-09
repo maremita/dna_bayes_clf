@@ -2,6 +2,7 @@
 
 import dna_bayes.evaluation as ev
 from dna_bayes import bayes
+from dna_bayes import kmers
 from dna_bayes import utils
 
 import warnings
@@ -18,7 +19,8 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score
 from sklearn.base import clone
-from sklearn.model_selection import train_test_split, StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit
+#from sklearn.model_selection import train_test_split
 
 
 def clfs_validation_holdout(classifiers, X, y, test_size, scorer,
@@ -51,7 +53,7 @@ def clfs_validation_holdout(classifiers, X, y, test_size, scorer,
 
 
 def k_evaluation(seq_file, cls_file, k_main_list, k_estim_list,
-        r_estim_list, nb_iter, scorer, random_state=None,
+        r_estim_list, full_kmers, nb_iter, scorer, random_state=None,
         verbose=True):
 
     priors="uniform"
@@ -67,8 +69,7 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim_list,
         #    solver='lbfgs', max_iter=400),
         #    "SK_Logistic_Regression"]
         }
-    len_clfs = len(classifiers)
-    
+    len_clfs = len(classifiers) 
 
     for r_estim in r_estim_list:
 
@@ -99,22 +100,57 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim_list,
                 seq_cv, seq_estim = ev.construct_split_collection(
                         seq_file, cls_file, r_estim, None)
 
-                seq_cv_X, seq_cv_y = ev.construct_Xy_data(seq_cv, k_main)
-               
+                # # Data for holdout validation
+
+                #seq_cv_X, seq_cv_y = ev.construct_Xy_data(seq_cv, k_main,
+                #        full_kmers)
+
+                seq_cv_kmers = ev.construct_kmers_data(seq_cv, k_main,
+                        full_kmers=full_kmers)
+                seq_cv_X = seq_cv_kmers.data
+                seq_cv_y = np.asarray(seq_cv.targets)
+                seq_cv_kmers_list = seq_cv_kmers.kmers_list
+                #print(seq_cv_X.shape)
+
                 # Estimate Alpha for MNB classifiers depending on k_estim
                 for k_i, k_estim in enumerate(k_estim_list):
                     #print("Processing k_estim={}".format(k_estim))
 
-                    seq_estim_X, seq_estim_y = ev.construct_Xy_data(
-                            seq_estim, k_estim)
+                    # # Data for alpha estimation
+                    #seq_estim_X, seq_estim_y = ev.construct_Xy_data(
+                    #        seq_estim, k_estim, full_kmers)
 
-                    all_words_data, _ = ev.kmer_dataset_construction(
-                            k_main, k_estim, alphabet='ACGT')
+                    seq_estim_kmers = ev.construct_kmers_data(seq_estim,
+                            k_estim, full_kmers=full_kmers)
+                    seq_estim_X = seq_estim_kmers.data
+                    seq_estim_y = np.asarray(seq_estim.targets)
+                    seq_estim_kmers_list = seq_estim_kmers.kmers_list
 
-                    a_mnom, a_mnom_y = bayes.Bayesian_MultinomialNB.\
-                            fit_alpha_with_markov(seq_estim_X, seq_estim_y,
-                                    all_words_data, None)
-                    
+                    seq_estim_kmers_back = ev.construct_kmers_data(seq_estim,
+                            k_estim-1, full_kmers=full_kmers)
+                    seq_estim_X_back = seq_estim_kmers_back.data
+                    seq_estim_back_kmers_list = seq_estim_kmers_back\
+                            .kmers_list
+
+                    X_estim = np.concatenate((seq_estim_X, seq_estim_X_back),
+                            axis=1)
+
+                    #words_data, _ = ev.kmer_dataset_construction(
+                    #        k_main, k_estim, alphabet='ACGT')
+
+                    words_data = kmers.GivenKmersCollection(seq_cv_kmers_list,
+                            seq_estim_kmers_list).data
+
+                    words_data_back = kmers.GivenKmersCollection(
+                            seq_cv_kmers_list, seq_estim_back_kmers_list).data
+        
+                    X_words = np.concatenate((words_data, words_data_back), 
+                            axis=1)
+
+                    a_mnom, a_mnom_y = bayes.Bayesian_MultinomialNB \
+                            .fit_alpha_with_markov(X_estim, seq_estim_y,
+                                    X_words, seq_estim_X.shape[1])
+ 
                     clf_ind = len_clfs + k_i
 
                     classifiers[clf_ind] = [bayes.Bayesian_MultinomialNB(
@@ -132,8 +168,8 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim_list,
             #pprint(scores_iter)
             for clf_dscp in scores_iter:
                 scores = np.asarray(scores_iter[clf_dscp]) 
-                k_scores[str(r_estim)][clf_dscp][str(k_main)] = [
-                        scores.mean(), scores.std()]
+                k_scores[str(r_estim)][clf_dscp][str(k_main)] = \
+                        [scores.mean(), scores.std()]
 
     return k_scores
 
@@ -147,10 +183,11 @@ if __name__ == "__main__":
     """
 
     k_main_list = list(range(4,10))
-    #k_main_list = [7, 8]
-    k_estim_list = [2, 3]
+    #k_main_list = [5, 6, 7]
+    k_estim_list = [3]
     r_estim_list = [0.1, 0.2, 0.3, 0.4, 0.5]
     #r_estim_list = [0.1, 0.2]
+    fullKmers = True
     rs = 0  # random_state
     verbose = True
     nb_iter = 10
@@ -164,10 +201,10 @@ if __name__ == "__main__":
     cls_file = sys.argv[2]
     scores_file = sys.argv[3]
 
-    if not os.path.isfile(scores_file):
-    #if True:
+    #if not os.path.isfile(scores_file):
+    if True:
         the_scores = k_evaluation(seq_file, cls_file, k_main_list,
-                k_estim_list, r_estim_list, nb_iter, 
+                k_estim_list, r_estim_list, fullKmers, nb_iter, 
                 the_scorer, random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out:

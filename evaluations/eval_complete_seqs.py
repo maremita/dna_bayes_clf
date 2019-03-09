@@ -15,7 +15,8 @@ from pprint import pprint
 
 import numpy as np
 
-from sklearn.model_selection import cross_validate, cross_val_score, StratifiedKFold
+from sklearn.model_selection import cross_validate, cross_val_score
+from sklearn.model_selection import StratifiedKFold
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
@@ -69,11 +70,6 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim, full_kmers,
         if verbose: print("\nProcessing k_main={}".format(k_main))
         if verbose: print("Dataset construction step")
 
-        #seq_cv_X, seq_cv_y, seq_estim_X, seq_estim_y = \
-        #        ev.seq_dataset_construction(seq_file, cls_file, 0.1,
-        #                k_main, k_estim, full_kmers=True, 
-        #                random_state=random_state)
-
         seq_cv, seq_estim = ev.construct_split_collection(seq_file, cls_file,
                 estim_size, random_state=random_state)
         
@@ -81,7 +77,6 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim, full_kmers,
         seq_cv_kmers = ev.construct_kmers_data(seq_cv, k_main,
                 full_kmers=full_kmers)
         seq_cv_X = seq_cv_kmers.data
-        print(seq_cv_X.shape)
         seq_cv_y = np.asarray(seq_cv.targets)
         seq_cv_kmers_list = seq_cv_kmers.kmers_list
 
@@ -105,9 +100,7 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim, full_kmers,
         X_estim = np.concatenate((seq_estim_X, seq_estim_X_back), axis=1)
 
         if verbose: print("Kmer word dataset construction step")
-        #words_data, backs_data = \
-        #        ev.kmer_dataset_construction(k_main, k_estim, 
-        #                alphabet='ACGT')
+
         words_data = kmers.GivenKmersCollection(seq_cv_kmers_list,
                 seq_estim_kmers_list).data
         words_data_back = kmers.GivenKmersCollection(seq_cv_kmers_list,
@@ -132,7 +125,8 @@ def k_evaluation(seq_file, cls_file, k_main_list, k_estim, full_kmers,
                 "sequence dataset for Markov Model")
         a_mkov, a_mkov_y = \
                 bayes.Bayesian_MarkovModel.fit_alpha_with_markov(
-                        X_estim, seq_estim_y, X_words, X_backs, seq_estim_X.shape[1])
+                        X_estim, seq_estim_y, X_words, X_backs,
+                        seq_estim_X.shape[1])
 
         classifiers = {
                 0: [bayes.MLE_MultinomialNB(priors=priors), False ,"MLE_MultinomNB"],
@@ -181,8 +175,8 @@ if __name__ == "__main__":
     #if not os.path.isfile(scores_file):
     if True:
         the_scores = k_evaluation(seq_file, cls_file, k_main_list, k_estim,
-                full_kmers=fullKmers, cv_iter=cv_iter,
-                scoring="f1_weighted", random_state=rs, verbose=True)
+                fullKmers, cv_iter=cv_iter, scoring="f1_weighted",
+                random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out: 
             json.dump(the_scores, fh_out, indent=2)
