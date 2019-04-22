@@ -182,12 +182,12 @@ if __name__ == "__main__":
     results/viruses/20190225_eval_estimation/HPV01.json
     """
 
-    k_main_list = list(range(4,10))
+    k_main_list = list(range(4,16))
     #k_main_list = [5, 6, 7]
     k_estim_list = [3]
     r_estim_list = [0.1, 0.2, 0.3, 0.4, 0.5]
     #r_estim_list = [0.1, 0.2]
-    fullKmers = True
+    fullKmers = False
     rs = 0  # random_state
     verbose = True
     nb_iter = 10
@@ -214,6 +214,5 @@ if __name__ == "__main__":
        the_scores = json.load(open(scores_file, "r"))
 
     #pprint(the_scores)
-    #the_scores = utils.rearrange_data_struct(the_scores)
     ev.make_figure2(the_scores, k_main_list, scores_file, verbose)
 
