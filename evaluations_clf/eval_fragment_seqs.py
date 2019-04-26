@@ -22,7 +22,7 @@ from sklearn.metrics import f1_score
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, SVC
 
 
 def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
@@ -121,15 +121,31 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
 
     classifiers = {
             0: [bayes.MLE_MultinomialNB(priors=priors), False, "MLE_MultinomNB"],
-            1: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-10), False, "BAY_MultinomNB_Alpha_1e-10"],
-            2: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), False, "BAY_MultinomNB_Alpha_1"],
+            1: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-100), False, "BAY_MultinomNB_Alpha_1e-100"],
+            2: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-10), False, "BAY_MultinomNB_Alpha_1e-10"],
+            3: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), False, "BAY_MultinomNB_Alpha_1"],
 
-            3: [bayes.MLE_MarkovModel(priors=priors), True, "MLE_Markov"],
-            4: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-10), True, "BAY_Markov_Alpha_1e-10"],
+            4: [bayes.MLE_MarkovModel(priors=priors), True, "MLE_Markov"],
+            5: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-100), True, "BAY_Markov_Alpha_1e-100"],
+            6: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-10), True, "BAY_Markov_Alpha_1e-10"],
+            7: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1), True, "BAY_Markov_Alpha_1"],
 
-            5: [GaussianNB(), False, "SK_Gaussian_NB"],
-            6: [LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=400), False, "SK_Logistic_Regression"],
-                7: [LinearSVC(), False, "SK_Linear_SVC"]
+            #5: [GaussianNB(), False, "SK_Gaussian_NB"],
+            8:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l1", max_iter=500), False, "SK_Multi_LR_Saga_L1"],
+            9:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l2", max_iter=500), False, "SK_Multi_LR_Saga_L2"],
+            10: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l1", max_iter=500), False, "SK_Ovr_LR_Liblinear_L1"],
+            11: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l2", max_iter=500), False, "SK_Ovr_LR_Liblinear_L2"],
+               
+            ## 12: [LinearSVC(penalty="l1", loss="hinge"), False, "SK_LinearSVC_Hinge_L1"], # NOT supported
+            12: [LinearSVC(penalty="l1", loss="squared_hinge", dual=False), False, "SK_LinearSVC_SquaredHinge_L1"],
+            13: [LinearSVC(penalty="l2", loss="hinge", dual=True), False, "SK_LinearSVC_Hinge_L2"],
+            14: [LinearSVC(penalty="l2", loss="squared_hinge", dual=True), False, "SK_LinearSVC_SquaredHinge_L2"],
+            
+            15: [SVC(kernel="linear"), False, "SK_SVC_Linear_Hinge_L2"],
+            16: [SVC(kernel="rbf", gamma="auto"), False, "SK_SVC_RBF"],
+            17: [SVC(kernel="poly", gamma="auto"), False, "SK_SVC_Poly"],
+            18: [SVC(kernel="sigmoid", gamma="auto"), False, "SK_SVC_Sigmoid"],
+            19: [GaussianNB(), False, "SK_Gaussian_NB"]
                 }
 
     for k_main in k_main_list:
@@ -152,9 +168,9 @@ def make_figure(scores, kList, jsonFile, verbose=True):
     fig_title = os.path.splitext((os.path.basename(jsonFile)))[0]
     
     cmap = cm.get_cmap('tab20')
-    colors = [cmap(j/10) for j in range(0,10)] 
+    colors = [cmap(j/20) for j in range(0,20)] 
 
-    f, axs = plt.subplots(2, 4, figsize=(22,10))
+    f, axs = plt.subplots(5, 4, figsize=(30,20))
     axs = np.concatenate(axs)
     #axs = list(zip(axs,clf_symbs))
     width = 0.45
@@ -173,9 +189,9 @@ def make_figure(scores, kList, jsonFile, verbose=True):
         axs[ind].set_ylim([0, 1.1])
         axs[ind].grid()
         
-        if ind == 0 or ind == 4:
+        if ind%4 == 0:
             axs[ind].set_ylabel('F1 weighted')
-        if ind >= 4:
+        if ind >= 16:
             axs[ind].set_xlabel('K length')
  
     plt.suptitle(fig_title)
@@ -197,8 +213,8 @@ if __name__ == "__main__":
     cls_file = sys.argv[2]
     scores_file = sys.argv[3]
 
-    k_main_list = list(range(4,11))
-    #k_main_list = [4, 5, 6]
+    #k_main_list = list(range(4,9))
+    k_main_list = [4, 5, 6, 7]
     full_kmers = False
     fragment_size = 250
     nb_iter = 5
