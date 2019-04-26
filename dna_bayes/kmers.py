@@ -119,6 +119,7 @@ class GivenKmersCollection(object):
         self.alphabet = alphabet
         self.kmers_list = kmers_list
         self.k = len(self.kmers_list[0])
+        self._construct_kmer_indices()
         #
         self.ids = []
         self.v_size = len(self.kmers_list)
@@ -134,8 +135,8 @@ class GivenKmersCollection(object):
         for i in range(len(sequence) - self.k + 1):
             kmer = sequence[i:i + self.k]
 
-            if kmer in self.kmers_list:
-                ind_kmer = self.kmers_list.index(kmer) 
+            if kmer in self.kmers_indices:
+                ind_kmer = self.kmers_indices[kmer]
                 self.data[ind][ind_kmer] += 1
 
         return self
@@ -151,5 +152,10 @@ class GivenKmersCollection(object):
         for i, seq in enumerate(sequences):
             self._compute_kmers_of_sequence(seq, i)
             self.ids.append(i)
+
+        return self
+
+    def _construct_kmer_indices(self):
+        self.kmers_indices = {kmer:i for i, kmer in enumerate(self.kmers_list)}
 
         return self

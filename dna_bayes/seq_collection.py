@@ -1,6 +1,6 @@
 from os.path import splitext
 import re
-from collections import UserList
+from collections import UserList, defaultdict
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
@@ -91,14 +91,14 @@ class SeqClassCollection(UserList):
                         for line in fh if not line.startswith("#"))))
 
     def get_fragments(self, size, step=1):
- 
+
         if step < 1:
             print("do_fragment step parameter should be sup to 1")
             step = 1
 
         new_data = []
 
-        for seqRec in self.data:
+        for ind, seqRec in enumerate(self.data):
             sequence = seqRec.seq
  
             i = 0
@@ -106,12 +106,22 @@ class SeqClassCollection(UserList):
                 fragment = sequence[i:i + size]
 
                 frgRec = SeqRecord(fragment, id=seqRec.id+"_"+str(i))
+                frgRec.rankParent = ind
                 frgRec.seqParent = seqRec.id
                 frgRec.target = seqRec.target
                 new_data.append(frgRec)
                 i += step
 
         return self.__class__(new_data)
+
+    def get_parents_rank_list(self):
+        parents = defaultdict(list)
+
+        for ind, seqRec in enumerate(self.data):
+            if hasattr(seqRec, "rankParent"):
+                parents[seqRec.rankParent].append(ind)
+
+        return parents
 
 
 if __name__ == "__main__":

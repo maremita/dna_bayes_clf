@@ -102,7 +102,7 @@ def clfs_validation(classifiers, X, y, cv_iter, scoring="f1_weighted",
 
 
 def make_figure(scores, kList, jsonFile, verbose=True):
-    if verbose: print("generating a figure")
+    if verbose: print("\ngenerating a figure")
     
     fig_file = os.path.splitext(jsonFile)[0] + ".png"
     fig_title = os.path.splitext((os.path.basename(jsonFile)))[0]
@@ -110,7 +110,7 @@ def make_figure(scores, kList, jsonFile, verbose=True):
     cmap = cm.get_cmap('tab20')
     colors = [cmap(j/10) for j in range(0,10)] 
 
-    f, axs = plt.subplots(2, 5, figsize=(22,10))
+    f, axs = plt.subplots(2, 4, figsize=(22,10))
     axs = np.concatenate(axs)
     #axs = list(zip(axs,clf_symbs))
     width = 0.45
