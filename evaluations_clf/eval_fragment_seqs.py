@@ -131,21 +131,21 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
             7: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1), True, "BAY_Markov_Alpha_1"],
 
             #5: [GaussianNB(), False, "SK_Gaussian_NB"],
-            8:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l1", max_iter=500), False, "SK_Multi_LR_Saga_L1"],
-            9:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l2", max_iter=500), False, "SK_Multi_LR_Saga_L2"],
-            10: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l1", max_iter=500), False, "SK_Ovr_LR_Liblinear_L1"],
-            11: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l2", max_iter=500), False, "SK_Ovr_LR_Liblinear_L2"],
+            #8:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l1", max_iter=500), False, "SK_Multi_LR_Saga_L1"],
+            #9:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l2", max_iter=500), False, "SK_Multi_LR_Saga_L2"],
+            #10: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l1", max_iter=500), False, "SK_Ovr_LR_Liblinear_L1"],
+            #11: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l2", max_iter=500), False, "SK_Ovr_LR_Liblinear_L2"],
                
             ## 12: [LinearSVC(penalty="l1", loss="hinge"), False, "SK_LinearSVC_Hinge_L1"], # NOT supported
-            12: [LinearSVC(penalty="l1", loss="squared_hinge", dual=False), False, "SK_LinearSVC_SquaredHinge_L1"],
-            13: [LinearSVC(penalty="l2", loss="hinge", dual=True), False, "SK_LinearSVC_Hinge_L2"],
-            14: [LinearSVC(penalty="l2", loss="squared_hinge", dual=True), False, "SK_LinearSVC_SquaredHinge_L2"],
+            #12: [LinearSVC(penalty="l1", loss="squared_hinge", dual=False), False, "SK_LinearSVC_SquaredHinge_L1"],
+            #13: [LinearSVC(penalty="l2", loss="hinge", dual=True), False, "SK_LinearSVC_Hinge_L2"],
+            #14: [LinearSVC(penalty="l2", loss="squared_hinge", dual=True), False, "SK_LinearSVC_SquaredHinge_L2"],
             
-            15: [SVC(kernel="linear"), False, "SK_SVC_Linear_Hinge_L2"],
-            16: [SVC(kernel="rbf", gamma="auto"), False, "SK_SVC_RBF"],
-            17: [SVC(kernel="poly", gamma="auto"), False, "SK_SVC_Poly"],
-            18: [SVC(kernel="sigmoid", gamma="auto"), False, "SK_SVC_Sigmoid"],
-            19: [GaussianNB(), False, "SK_Gaussian_NB"]
+            #15: [SVC(kernel="linear"), False, "SK_SVC_Linear_Hinge_L2"],
+            #16: [SVC(kernel="rbf", gamma="auto"), False, "SK_SVC_RBF"],
+            #17: [SVC(kernel="poly", gamma="auto"), False, "SK_SVC_Poly"],
+            #18: [SVC(kernel="sigmoid", gamma="auto"), False, "SK_SVC_Sigmoid"],
+            #19: [GaussianNB(), False, "SK_Gaussian_NB"]
                 }
 
     for k_main in k_main_list:
@@ -204,17 +204,19 @@ if __name__ == "__main__":
     """
     ./eval_fragment_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01_frgmt_250.json
     """
-
+    
     if len(sys.argv) != 4:
         print("3 arguments are needed!")
         sys.exit()
+
+    print("RUN {}".format(sys.argv[0]))
 
     seq_file = sys.argv[1]
     cls_file = sys.argv[2]
     scores_file = sys.argv[3]
 
     #k_main_list = list(range(4,9))
-    k_main_list = [4, 5, 6, 7]
+    k_main_list = [4, 5]
     full_kmers = False
     fragment_size = 250
     nb_iter = 5
