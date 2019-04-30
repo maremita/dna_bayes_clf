@@ -2,7 +2,6 @@
 
 import dna_bayes.evaluation as ev 
 from dna_bayes import kmers
-from dna_bayes import bayes
 from dna_bayes import utils
 from dna_bayes import seq_collection
 
@@ -21,10 +20,6 @@ import matplotlib.cm as cm
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import f1_score
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import GaussianNB
-from sklearn.svm import LinearSVC, SVC
 
 
 __author__ = "amine"

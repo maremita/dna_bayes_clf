@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import dna_bayes.evaluation as ev 
-#from dna_bayes import bayes
 from dna_bayes import seq_collection
 from dna_bayes import kmers
 
@@ -22,10 +21,6 @@ import matplotlib.cm as cm
 
 from sklearn.model_selection import cross_validate, cross_val_score
 from sklearn.model_selection import StratifiedKFold
-
-#from sklearn.linear_model import LogisticRegression
-#from sklearn.naive_bayes import GaussianNB
-#from sklearn.svm import LinearSVC, SVC
 
 
 __author__ = "amine"
