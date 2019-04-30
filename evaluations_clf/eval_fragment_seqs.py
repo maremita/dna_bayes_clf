@@ -6,6 +6,8 @@ from dna_bayes import bayes
 from dna_bayes import utils
 from dna_bayes import seq_collection
 
+from eval_classifiers import eval_clfs
+
 import sys
 import json
 import os.path
@@ -25,13 +27,18 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import LinearSVC, SVC
 
 
+__author__ = "amine"
+
+
+sys.stdout.flush()
+
 def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
         k, full_kmers, nb_iter, scorer, random_state=None, verbose=False):
 
     scores_iter = defaultdict(lambda: [0]*nb_iter)
     final_scores = dict()
 
-    if verbose: print("Validation step")
+    if verbose: print("Validation step", flush=True)
  
     ## construct X and X_back dataset
     X_kmer = ev.construct_kmers_data(data_seqs, k, full_kmers=full_kmers)
@@ -59,7 +66,7 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
     sss = StratifiedShuffleSplit(n_splits=nb_iter, test_size=0.2, random_state=random_state)
 
     for ind_iter, (train_ind, test_ind) in enumerate(sss.split(seq_ind, y)):
-        if verbose: print("\nIteration {}\n".format(ind_iter))
+        if verbose: print("\nIteration {}\n".format(ind_iter), flush=True)
 
         X_train = X[train_ind]
         X_back_train = X_back[train_ind]
@@ -81,7 +88,7 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
             classifier, use_X_back, clf_dscp = classifiers[clf_ind]
 
             new_clf = clone(classifier)
-            if verbose: print("Evaluating {}\r".format(clf_dscp))
+            if verbose: print("Evaluating {}\r".format(clf_dscp), flush=True)
 
             final_X_train = X_train 
             final_X_test = X_test
@@ -108,10 +115,9 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
 def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
         frgmt_size, nb_iter, scorer, random_state=None, verbose=True):
 
-    priors="uniform"
     k_scores = defaultdict(dict)
 
-    if verbose: print("Dataset construction step")
+    if verbose: print("Dataset construction step", flush=True)
 
     seq_cv = seq_collection.SeqClassCollection((seq_file, cls_file))
 
@@ -119,37 +125,10 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
     frgmts_cv = seq_cv.get_fragments(frgmt_size, step=int(frgmt_size/2))
     frgmts_parents = frgmts_cv.get_parents_rank_list()
 
-    classifiers = {
-            0: [bayes.MLE_MultinomialNB(priors=priors), False, "MLE_MultinomNB"],
-            1: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-100), False, "BAY_MultinomNB_Alpha_1e-100"],
-            2: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-10), False, "BAY_MultinomNB_Alpha_1e-10"],
-            3: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), False, "BAY_MultinomNB_Alpha_1"],
-
-            4: [bayes.MLE_MarkovModel(priors=priors), True, "MLE_Markov"],
-            5: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-100), True, "BAY_Markov_Alpha_1e-100"],
-            6: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-10), True, "BAY_Markov_Alpha_1e-10"],
-            7: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1), True, "BAY_Markov_Alpha_1"],
-
-            #5: [GaussianNB(), False, "SK_Gaussian_NB"],
-            #8:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l1", max_iter=500), False, "SK_Multi_LR_Saga_L1"],
-            #9:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l2", max_iter=500), False, "SK_Multi_LR_Saga_L2"],
-            #10: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l1", max_iter=500), False, "SK_Ovr_LR_Liblinear_L1"],
-            #11: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l2", max_iter=500), False, "SK_Ovr_LR_Liblinear_L2"],
-               
-            ## 12: [LinearSVC(penalty="l1", loss="hinge"), False, "SK_LinearSVC_Hinge_L1"], # NOT supported
-            #12: [LinearSVC(penalty="l1", loss="squared_hinge", dual=False), False, "SK_LinearSVC_SquaredHinge_L1"],
-            #13: [LinearSVC(penalty="l2", loss="hinge", dual=True), False, "SK_LinearSVC_Hinge_L2"],
-            #14: [LinearSVC(penalty="l2", loss="squared_hinge", dual=True), False, "SK_LinearSVC_SquaredHinge_L2"],
-            
-            #15: [SVC(kernel="linear"), False, "SK_SVC_Linear_Hinge_L2"],
-            #16: [SVC(kernel="rbf", gamma="auto"), False, "SK_SVC_RBF"],
-            #17: [SVC(kernel="poly", gamma="auto"), False, "SK_SVC_Poly"],
-            #18: [SVC(kernel="sigmoid", gamma="auto"), False, "SK_SVC_Sigmoid"],
-            #19: [GaussianNB(), False, "SK_Gaussian_NB"]
-                }
+    classifiers = eval_clfs
 
     for k_main in k_main_list:
-        if verbose: print("\nProcessing k_main={}".format(k_main))
+        if verbose: print("\nProcessing k_main={}".format(k_main), flush=True)
 
         clf_scores = clf_evaluation_with_fragments(classifiers,
                 seq_cv, frgmts_cv, frgmts_parents, k_main, full_kmers, 
@@ -162,7 +141,7 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
 
 
 def make_figure(scores, kList, jsonFile, verbose=True):
-    if verbose: print("\ngenerating a figure")
+    if verbose: print("\ngenerating a figure", flush=True)
     
     fig_file = os.path.splitext(jsonFile)[0] + ".png"
     fig_title = os.path.splitext((os.path.basename(jsonFile)))[0]
@@ -205,21 +184,23 @@ if __name__ == "__main__":
     ./eval_fragment_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01_frgmt_250.json
     """
     
-    if len(sys.argv) != 4:
-        print("3 arguments are needed!")
+    if len(sys.argv) != 8:
+        print("7 arguments are needed!")
         sys.exit()
 
-    print("RUN {}".format(sys.argv[0]))
+    print("RUN {}".format(sys.argv[0]), flush=True)
 
     seq_file = sys.argv[1]
     cls_file = sys.argv[2]
     scores_file = sys.argv[3]
+    s_klen=int(sys.argv[4])
+    e_klen=int(sys.argv[5])
+    fragment_size = int(sys.argv[6]) # 250
+    nb_iter = int(sys.argv[7])       # 5
 
-    #k_main_list = list(range(4,9))
-    k_main_list = [4, 5]
+    k_main_list = list(range(s_klen, e_klen+1))
+    #k_main_list = [4, 5]
     full_kmers = False
-    fragment_size = 250
-    nb_iter = 5
     the_scorer = f1_score
 
     rs = 0  # random_state
