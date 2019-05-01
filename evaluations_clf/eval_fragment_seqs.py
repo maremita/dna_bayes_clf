@@ -25,8 +25,6 @@ from sklearn.metrics import f1_score
 __author__ = "amine"
 
 
-sys.stdout.flush()
-
 def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
         k, full_kmers, nb_iter, scorer, random_state=None, verbose=False):
 

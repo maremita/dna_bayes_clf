@@ -34,8 +34,6 @@ def clfs_validation(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
  
     if verbose: print("Cross-Validation step", flush=True)
 
-    skf = StratifiedKFold(n_splits=cv_iter, shuffle=True,
-            random_state=random_state)
 
     for clf_ind in classifiers:
         classifier, use_X_back, clf_dscp = classifiers[clf_ind]
@@ -47,6 +45,9 @@ def clfs_validation(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
             params = {'v':X.shape[1]}
 
         if verbose: print("Evaluating {}".format(clf_dscp), flush=True)
+
+        skf = StratifiedKFold(n_splits=cv_iter, shuffle=True,
+                random_state=random_state)
 
         scores_tmp = cross_val_score(classifier, final_X, y, cv=skf,
                 scoring=scoring, fit_params=params)
