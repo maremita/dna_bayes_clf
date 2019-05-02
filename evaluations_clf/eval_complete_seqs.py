@@ -14,6 +14,8 @@ import json
 import os.path
 from pprint import pprint
 from collections import defaultdict
+#
+from multiprocessing import Pool
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,14 +28,54 @@ from sklearn.model_selection import StratifiedKFold
 __author__ = "amine"
 
 
-def clfs_validation(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
+def clf_cross_val(classifier, X, X_conc, y, scoring, cv_iter,
+        random_state, verbose):
+
+    clf, use_X_back, clf_dscp = classifier
+    final_X = X
+    params = {}
+
+    if use_X_back:
+        final_X = X_conc
+        params = {'v':X.shape[1]}
+
+    skf = StratifiedKFold(n_splits=cv_iter, shuffle=True,
+            random_state=random_state)
+
+    scores_tmp = clf_dscp, cross_val_score(clf, final_X, y, cv=skf,
+            scoring=scoring, fit_params=params)
+
+    if verbose: print("Evaluated: {}\r".format(clf_dscp), flush=True)
+
+    return scores_tmp
+
+
+def clfs_evaluation_mp(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
+        n_proc=4, random_state=None, verbose=False):
+
+    X_conc = np.concatenate((X, X_b), axis=1)
+ 
+    if verbose: print("Cross-Validation step", flush=True)
+
+    pool = Pool(processes=n_proc)
+
+    results = [pool.apply_async(clf_cross_val, args=(classifiers[clf_ind], X, X_conc, y,
+        scoring, cv_iter, random_state, verbose)) for clf_ind in classifiers]
+ 
+    clf_cv_scores = [p.get() for p in results]
+
+    scores = {clf_dscp:[cv_scores.mean(), cv_scores.std()] for clf_dscp, cv_scores in clf_cv_scores }
+
+    return scores
+
+
+def clfs_evaluation(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
         random_state=None, verbose=False):
 
     scores = dict()
     X_conc = np.concatenate((X, X_b), axis=1)
  
     if verbose: print("Cross-Validation step", flush=True)
-
 
     for clf_ind in classifiers:
         classifier, use_X_back, clf_dscp = classifiers[clf_ind]
@@ -44,20 +86,21 @@ def clfs_validation(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
             final_X = X_conc
             params = {'v':X.shape[1]}
 
-        if verbose: print("Evaluating {}".format(clf_dscp), flush=True)
-
         skf = StratifiedKFold(n_splits=cv_iter, shuffle=True,
                 random_state=random_state)
 
         scores_tmp = cross_val_score(classifier, final_X, y, cv=skf,
                 scoring=scoring, fit_params=params)
+
+        if verbose: print("Evaluated: {}\r".format(clf_dscp), flush=True)
+
         scores[clf_dscp] = [scores_tmp.mean(), scores_tmp.std()]
 
     return scores
 
 
 def k_evaluation(seq_file, cls_file, k_main_list, full_kmers,
-        cv_iter, scoring="f1_weighted", random_state=None, verbose=True):
+        cv_iter, scoring="f1_weighted", n_proc=4, random_state=None, verbose=True):
 
     k_scores = defaultdict(dict)
 
@@ -73,19 +116,22 @@ def k_evaluation(seq_file, cls_file, k_main_list, full_kmers,
                 full_kmers=full_kmers)
         seq_cv_X = seq_cv_kmers.data
         seq_cv_y = np.asarray(seq_cv.targets)
-        #seq_cv_kmers_list = seq_cv_kmers.kmers_list
 
         seq_cv_back_kmers = ev.construct_kmers_data(seq_cv, k_main-1,
                 full_kmers=full_kmers)
         seq_cv_X_back = seq_cv_back_kmers.data
-        #seq_cv_back_kmers_list = seq_cv_back_kmers.kmers_list
 
         classifiers = eval_clfs
 
-        clf_scores = clfs_validation(classifiers, seq_cv_X,
-                seq_cv_X_back, seq_cv_y, cv_iter, scoring=scoring, 
-                random_state=random_state, verbose=verbose)
-        
+        if n_proc <= 0 :
+            clf_scores = clfs_evaluation(classifiers, seq_cv_X,
+                    seq_cv_X_back, seq_cv_y, cv_iter, scoring=scoring, 
+                    random_state=random_state, verbose=verbose)
+        else: 
+            clf_scores = clfs_evaluation_mp(classifiers, seq_cv_X,
+                    seq_cv_X_back, seq_cv_y, cv_iter, scoring=scoring, 
+                    n_proc=n_proc, random_state=random_state, verbose=verbose)
+
         for clf_dscp in clf_scores:
             k_scores[clf_dscp][str(k_main)] = clf_scores[clf_dscp]
 
@@ -122,7 +168,9 @@ def make_figure(scores, kList, jsonFile, verbose=True):
             axs[ind].set_ylabel('F1 weighted')
         if ind >= 16:
             axs[ind].set_xlabel('K length')
- 
+    
+        axs[ind].set_xticks([k for k in kList])
+
     plt.suptitle(fig_title)
     plt.savefig(fig_file)
     plt.show()
@@ -130,12 +178,15 @@ def make_figure(scores, kList, jsonFile, verbose=True):
 if __name__ == "__main__":
  
     """
-    ./eval_complete_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01_test.json
+    ./eval_complete_seqs.py\ 
+    ../data/viruses/HIV01/data.fa\ 
+    ../data/viruses/HIV01/class.csv\ 
+    ../results/viruses/wcb_2019/tests/HIV01_mp.json\
+    4 5 4 4
     """
 
-
-    if len(sys.argv) != 7:
-        print("6 arguments are needed!")
+    if len(sys.argv) != 8:
+        print("7 arguments are needed!")
         sys.exit()
 
     print("RUN {}".format(sys.argv[0]), flush=True)
@@ -145,10 +196,10 @@ if __name__ == "__main__":
     scores_file = sys.argv[3]
     s_klen=int(sys.argv[4])
     e_klen=int(sys.argv[5])
-    cv_iter = int(sys.argv[6]) #5
+    cv_iter = int(sys.argv[6])
+    n_proc = int(sys.argv[7])
 
     k_main_list = list(range(s_klen, e_klen+1))
-    #k_main_list = [4, 5, 6]
     fullKmers = False
     rs = 0  # random_state
     verbose = True
@@ -157,7 +208,7 @@ if __name__ == "__main__":
     #if True:
         the_scores = k_evaluation(seq_file, cls_file, k_main_list,
                 fullKmers, cv_iter=cv_iter, scoring="f1_weighted",
-                random_state=rs, verbose=True)
+                n_proc=4, random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out: 
             json.dump(the_scores, fh_out, indent=2)

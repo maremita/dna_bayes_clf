@@ -12,6 +12,8 @@ import json
 import os.path
 from collections import defaultdict
 from pprint import pprint
+#
+from multiprocessing import Pool
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,8 +27,83 @@ from sklearn.metrics import f1_score
 __author__ = "amine"
 
 
+def clf_cross_val(classifier, X_train, X_conc_train, y_train,
+        X_test, X_conc_test, y_test, scorer, verbose=True):
+
+    clf, use_X_back, clf_dscp = classifier
+
+    new_clf = clone(clf)
+    if verbose: print("Evaluating {}\r".format(clf_dscp), flush=True)
+
+    final_X_train = X_train 
+    final_X_test = X_test
+    params = {}
+
+    if use_X_back:
+        final_X_train = X_conc_train
+        final_X_test = X_conc_test
+        params = {'v':X_train.shape[1]}
+        y_pred = new_clf.fit(final_X_train, y_train, **params).predict(final_X_test)
+
+    else:
+        y_pred = new_clf.fit(final_X_train, y_train).predict(final_X_test)
+
+    if verbose: print("Evaluated: {}\r".format(clf_dscp), flush=True)
+
+    score_tmp = clf_dscp, scorer(y_test, y_pred, average="weighted") 
+
+    return score_tmp
+
+
+def clfs_evaluation_mp(classifiers, X_train, X_conc_train, y_train,
+        X_test, X_conc_test, y_test, scorer, n_proc, verbose=True):
+
+    pool = Pool(processes=n_proc)
+
+    results = [pool.apply_async(clf_cross_val, args=(classifiers[clf_ind],
+        X_train, X_conc_train, y_train, X_test, X_conc_test, y_test,
+        scorer, verbose)) for clf_ind in classifiers]
+ 
+    clf_cv_scores = [p.get() for p in results]
+
+    scores = {clf_dscp:score for clf_dscp, score in clf_cv_scores}
+
+    return scores
+
+
+def clfs_evaluation(classifiers, X_train, X_conc_train, y_train,
+        X_test, X_conc_test, y_test, scorer, verbose=True):
+
+    scores = dict()
+
+    for clf_ind in classifiers:
+        classifier, use_X_back, clf_dscp = classifiers[clf_ind]
+
+        new_clf = clone(classifier)
+
+        final_X_train = X_train 
+        final_X_test = X_test
+        params = {}
+
+        if use_X_back:
+            final_X_train = X_conc_train
+            final_X_test = X_conc_test
+            params = {'v':X_train.shape[1]}
+            y_pred = new_clf.fit(final_X_train, y_train, **params).predict(final_X_test)
+
+        else:
+            y_pred = new_clf.fit(final_X_train, y_train).predict(final_X_test)
+
+        if verbose: print("Evaluated: {}\r".format(clf_dscp), flush=True)
+        
+        scores[clf_dscp] = scorer(y_test, y_pred, average="weighted")
+
+    return scores
+
+
 def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
-        k, full_kmers, nb_iter, scorer, random_state=None, verbose=False):
+        k, full_kmers, nb_iter, scorer, n_proc, random_state=None,
+        verbose=False):
 
     scores_iter = defaultdict(lambda: [0]*nb_iter)
     final_scores = dict()
@@ -76,27 +153,38 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
 
         #print("X_test shape {}".format(X_test.shape))
         #print("y_test shape {}".format(y_test.shape))
+       
+        if n_proc <= 0 :
+            clf_scores = clfs_evaluation(classifiers, X_train, X_conc_train, y_train,
+                X_test, X_conc_test, y_test, scorer, verbose=verbose)
 
-        for clf_ind in classifiers:
-            classifier, use_X_back, clf_dscp = classifiers[clf_ind]
+        else: 
+            clf_scores = clfs_evaluation_mp(classifiers, X_train, X_conc_train, y_train,
+                X_test, X_conc_test, y_test, scorer, n_proc, verbose=verbose)
 
-            new_clf = clone(classifier)
-            if verbose: print("Evaluating {}\r".format(clf_dscp), flush=True)
+        for clf_dscp in clf_scores:
+            scores_iter[clf_dscp][ind_iter] = clf_scores[clf_dscp]
 
-            final_X_train = X_train 
-            final_X_test = X_test
-            params = {}
+       # for clf_ind in classifiers:
+       #     classifier, use_X_back, clf_dscp = classifiers[clf_ind]
 
-            if use_X_back:
-                final_X_train = X_conc_train
-                final_X_test = X_conc_test
-                params = {'v':X.shape[1]}
-                y_pred = new_clf.fit(final_X_train, y_train, **params).predict(final_X_test)
+       #     new_clf = clone(classifier)
+       #     if verbose: print("Evaluating {}\r".format(clf_dscp), flush=True)
 
-            else:
-                y_pred = new_clf.fit(final_X_train, y_train).predict(final_X_test)
+       #     final_X_train = X_train 
+       #     final_X_test = X_test
+       #     params = {}
 
-            scores_iter[clf_dscp][ind_iter] = scorer(y_test, y_pred, average="weighted")
+       #     if use_X_back:
+       #         final_X_train = X_conc_train
+       #         final_X_test = X_conc_test
+       #         params = {'v':X.shape[1]}
+       #         y_pred = new_clf.fit(final_X_train, y_train, **params).predict(final_X_test)
+
+       #     else:
+       #         y_pred = new_clf.fit(final_X_train, y_train).predict(final_X_test)
+
+       #     scores_iter[clf_dscp][ind_iter] = scorer(y_test, y_pred, average="weighted")
 
     for clf_dscp in scores_iter:
         scores = np.asarray(scores_iter[clf_dscp]) 
@@ -106,7 +194,7 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
 
 
 def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
-        frgmt_size, nb_iter, scorer, random_state=None, verbose=True):
+        frgmt_size, nb_iter, scorer, n_proc, random_state=None, verbose=True):
 
     k_scores = defaultdict(dict)
 
@@ -125,7 +213,7 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
 
         clf_scores = clf_evaluation_with_fragments(classifiers,
                 seq_cv, frgmts_cv, frgmts_parents, k_main, full_kmers, 
-                nb_iter, scorer, random_state=random_state, verbose=verbose)
+                nb_iter, scorer, n_proc, random_state=random_state, verbose=verbose)
 
         for clf_dscp in clf_scores:
             k_scores[clf_dscp][str(k_main)] = clf_scores[clf_dscp]
@@ -166,6 +254,8 @@ def make_figure(scores, kList, jsonFile, verbose=True):
         if ind >= 16:
             axs[ind].set_xlabel('K length')
  
+        axs[ind].set_xticks([k for k in kList])
+
     plt.suptitle(fig_title)
     plt.savefig(fig_file)
     plt.show()
@@ -174,11 +264,15 @@ def make_figure(scores, kList, jsonFile, verbose=True):
 if __name__ == "__main__":
  
     """
-    ./eval_fragment_seqs.py data/viruses/HPV01/data.fa data/viruses/HPV01/class.csv results/viruses/HPV01_frgmt_250.json
+    ./eval_fragment_seqs.py\ 
+    ../data/viruses/HIV01/data.fa\ 
+    ../data/viruses/HIV01/class.csv\ 
+    ../results/viruses/wcb_2019/tests/HIV01_frg_mp.json\
+    4 5 1000 5 4
     """
     
-    if len(sys.argv) != 8:
-        print("7 arguments are needed!")
+    if len(sys.argv) != 9:
+        print("8 arguments are needed!")
         sys.exit()
 
     print("RUN {}".format(sys.argv[0]), flush=True)
@@ -188,11 +282,11 @@ if __name__ == "__main__":
     scores_file = sys.argv[3]
     s_klen=int(sys.argv[4])
     e_klen=int(sys.argv[5])
-    fragment_size = int(sys.argv[6]) # 250
-    nb_iter = int(sys.argv[7])       # 5
+    fragment_size = int(sys.argv[6])
+    nb_iter = int(sys.argv[7])
+    n_proc = int(sys.argv[8])
 
     k_main_list = list(range(s_klen, e_klen+1))
-    #k_main_list = [4, 5]
     full_kmers = False
     the_scorer = f1_score
 
@@ -203,7 +297,7 @@ if __name__ == "__main__":
     #if True:
         the_scores = k_evaluation_with_fragments(seq_file, cls_file,
                 k_main_list, full_kmers, fragment_size, nb_iter, the_scorer,
-                random_state=rs, verbose=True)
+                n_proc, random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out: 
             json.dump(the_scores, fh_out, indent=2)
