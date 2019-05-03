@@ -33,7 +33,6 @@ def clf_cross_val(classifier, X_train, X_conc_train, y_train,
     clf, use_X_back, clf_dscp = classifier
 
     new_clf = clone(clf)
-    if verbose: print("Evaluating {}\r".format(clf_dscp), flush=True)
 
     final_X_train = X_train 
     final_X_test = X_test
