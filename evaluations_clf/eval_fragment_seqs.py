@@ -12,12 +12,12 @@ import json
 import os.path
 from collections import defaultdict
 from pprint import pprint
-#
-from multiprocessing import Pool
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+
+from joblib import Parallel, delayed
 
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -56,14 +56,11 @@ def clf_cross_val(classifier, X_train, X_conc_train, y_train,
 
 def clfs_evaluation_mp(classifiers, X_train, X_conc_train, y_train,
         X_test, X_conc_test, y_test, scorer, n_proc, verbose=True):
-
-    pool = Pool(processes=n_proc)
-
-    results = [pool.apply_async(clf_cross_val, args=(classifiers[clf_ind],
-        X_train, X_conc_train, y_train, X_test, X_conc_test, y_test,
-        scorer, verbose)) for clf_ind in classifiers]
- 
-    clf_cv_scores = [p.get() for p in results]
+  
+    clf_cv_scores = Parallel(n_jobs=n_proc, prefer="processes")(
+            delayed(clf_cross_val)(classifiers[clf_ind], X_train, 
+                X_conc_train, y_train, X_test, X_conc_test, y_test,
+                scorer, verbose) for clf_ind in classifiers)
 
     scores = {clf_dscp:score for clf_dscp, score in clf_cv_scores}
 
@@ -153,7 +150,7 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
         #print("X_test shape {}".format(X_test.shape))
         #print("y_test shape {}".format(y_test.shape))
        
-        if n_proc <= 0 :
+        if n_proc == 0 :
             clf_scores = clfs_evaluation(classifiers, X_train, X_conc_train, y_train,
                 X_test, X_conc_test, y_test, scorer, verbose=verbose)
 

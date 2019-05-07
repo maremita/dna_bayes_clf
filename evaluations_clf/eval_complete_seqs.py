@@ -14,12 +14,12 @@ import json
 import os.path
 from pprint import pprint
 from collections import defaultdict
-#
-from multiprocessing import Pool
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+
+from joblib import Parallel, delayed
 
 from sklearn.model_selection import cross_validate, cross_val_score
 from sklearn.model_selection import StratifiedKFold
@@ -57,12 +57,10 @@ def clfs_evaluation_mp(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
  
     if verbose: print("Cross-Validation step", flush=True)
 
-    pool = Pool(processes=n_proc)
-
-    results = [pool.apply_async(clf_cross_val, args=(classifiers[clf_ind], X, X_conc, y,
-        scoring, cv_iter, random_state, verbose)) for clf_ind in classifiers]
- 
-    clf_cv_scores = [p.get() for p in results]
+    clf_cv_scores = Parallel(n_jobs=n_proc, prefer="processes")(
+            delayed(clf_cross_val)(classifiers[clf_ind], X, X_conc, y,
+                scoring, cv_iter, random_state, verbose)
+            for clf_ind in classifiers)
 
     scores = {clf_dscp:[cv_scores.mean(), cv_scores.std()] for clf_dscp, cv_scores in clf_cv_scores }
 
@@ -123,7 +121,7 @@ def k_evaluation(seq_file, cls_file, k_main_list, full_kmers,
 
         classifiers = eval_clfs
 
-        if n_proc <= 0 :
+        if n_proc == 0 :
             clf_scores = clfs_evaluation(classifiers, seq_cv_X,
                     seq_cv_X_back, seq_cv_y, cv_iter, scoring=scoring, 
                     random_state=random_state, verbose=verbose)
