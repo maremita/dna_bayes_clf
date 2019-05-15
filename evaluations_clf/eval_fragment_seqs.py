@@ -161,27 +161,6 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
         for clf_dscp in clf_scores:
             scores_iter[clf_dscp][ind_iter] = clf_scores[clf_dscp]
 
-       # for clf_ind in classifiers:
-       #     classifier, use_X_back, clf_dscp = classifiers[clf_ind]
-
-       #     new_clf = clone(classifier)
-       #     if verbose: print("Evaluating {}\r".format(clf_dscp), flush=True)
-
-       #     final_X_train = X_train 
-       #     final_X_test = X_test
-       #     params = {}
-
-       #     if use_X_back:
-       #         final_X_train = X_conc_train
-       #         final_X_test = X_conc_test
-       #         params = {'v':X.shape[1]}
-       #         y_pred = new_clf.fit(final_X_train, y_train, **params).predict(final_X_test)
-
-       #     else:
-       #         y_pred = new_clf.fit(final_X_train, y_train).predict(final_X_test)
-
-       #     scores_iter[clf_dscp][ind_iter] = scorer(y_test, y_pred, average="weighted")
-
     for clf_dscp in scores_iter:
         scores = np.asarray(scores_iter[clf_dscp]) 
         final_scores[clf_dscp] = [scores.mean(), scores.std()]
