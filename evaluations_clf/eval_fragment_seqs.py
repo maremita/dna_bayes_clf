@@ -302,4 +302,4 @@ if __name__ == "__main__":
        the_scores = json.load(open(scores_file, "r"))
 
     #pprint(the_scores)
-    make_figure(the_scores, k_main_list, scores_file, verbose)
+    #make_figure(the_scores, k_main_list, scores_file, verbose)
