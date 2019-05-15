@@ -214,4 +214,4 @@ if __name__ == "__main__":
     else:
        the_scores = json.load(open(scores_file, "r"))
 
-    make_figure(the_scores, k_main_list, scores_file, verbose)
+    #make_figure(the_scores, k_main_list, scores_file, verbose)
