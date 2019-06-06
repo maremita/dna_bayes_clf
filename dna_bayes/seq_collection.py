@@ -1,5 +1,6 @@
 from os.path import splitext
 import re
+import copy
 from collections import UserList, defaultdict
 
 from Bio import SeqIO
@@ -25,16 +26,18 @@ class SeqClassCollection(UserList):
 
         # If argument is a list of labeled seq records 
         elif isinstance(arg, list):
-            self.data = arg
+            #self.data = arg
+            self.data = copy.deepcopy(arg)
             self.get_targets()
 
         # If argument is SeqClassCollection object
         elif isinstance(arg, self.__class__):
-            self.data = arg.data[:]
+            #self.data = arg.data[:]
+            self.data = copy.deepcopy(arg.data)
             self.get_targets()
 
         else:
-            self.data = list(arg)
+            self.data = list(copy.deepcopy(arg))
             self.get_targets() 
 
     def set_targets(self):
@@ -65,6 +68,7 @@ class SeqClassCollection(UserList):
         if isinstance(ind, int):
             return self.data[ind]
 
+        # With instantiation, data will be deep copied  
         # If the argument is a list of indexes
         elif isinstance(ind, list):
 
