@@ -10,12 +10,34 @@ __all__ = ['SeqClassCollection']
 
 
 class SeqClassCollection(UserList):
-    
-    def __init__(self, arg):
 
+    """
+    Attributes
+    ----------
+
+    data : list of Bio.SeqRecord
+        Collection of sequence records
+
+    targets : list
+        Collection of targets of the sequences
+        The order of target needs to be the same as
+        the sequences in data
+
+    target_map : dict
+        mapping of sequences and their targets (classes)
+
+    taget_ind : defaultdict(list)
+        Collection of targets and the indices of belonging
+        sequences
+
+    """
+
+    def __init__(self, arg):
+ 
         self.data = []
         self.targets = []
         self.target_map = {}
+        self.target_ind = defaultdict(list)
 
         # If arguments are two files
         # Fasta file and annotation file
@@ -36,19 +58,22 @@ class SeqClassCollection(UserList):
             self.data = copy.deepcopy(arg.data)
             self.get_targets()
 
+        # why?
         else:
             self.data = list(copy.deepcopy(arg))
             self.get_targets() 
 
     def set_targets(self):
-        for seqRecord in self.data:
+        for ind, seqRecord in enumerate(self.data):
             if seqRecord.id in self.target_map:
                 seqRecord.target = self.target_map[seqRecord.id]
                 self.targets.append(self.target_map[seqRecord.id])
+                self.target_ind[seqRecord.target].append(ind)
 
             else:
                 print("No target label for {}\n".format(seqRecord.id))
                 self.targets.append("UNKNOWN")
+                self.target_ind["UNKNOWN"].append(ind)
 
     def get_targets(self):
 
@@ -56,6 +81,9 @@ class SeqClassCollection(UserList):
                         for seqRec in self.data)
 
         self.targets = list(seqRec.target for seqRec in self.data)
+
+        for ind, seqRecord in enumerate(self.data):
+            self.target_ind[seqRecord.target].append(ind)
 
     def __getitem__(self, ind):
         # TODO
