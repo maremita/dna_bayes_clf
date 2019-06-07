@@ -1,12 +1,14 @@
 from os.path import splitext
 import re
 import copy
+import random
 from collections import UserList, defaultdict
 
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
 __all__ = ['SeqClassCollection']
+
 
 
 class SeqClassCollection(UserList):
@@ -97,7 +99,7 @@ class SeqClassCollection(UserList):
             return self.data[ind]
 
         # With instantiation, data will be deep copied  
-        # If the argument is a list of indexes
+        # If the argument is a list of indices
         elif isinstance(ind, list):
 
             tmp = [self.data[i] for i in ind if i>= 0 and i<len(self.data)]
@@ -122,10 +124,20 @@ class SeqClassCollection(UserList):
             return dict(map(lambda x: (x[0], x[1]), (re.split(r'[\t,;\s]', line.rstrip("\n"))
                         for line in fh if not line.startswith("#"))))
 
+    @classmethod
+    def write_fasta(cls, data, out_fasta):
+        SeqIO.write(data, out_fasta, "fasta")
+
+    @classmethod
+    def write_classes(cls, classes, file_class):
+        with open(file_class, "w") as fh:
+            for entry in classes:
+                fh.write(entry+","+classes[entry]+"\n")
+
     def get_fragments(self, size, step=1):
 
         if step < 1:
-            print("do_fragment step parameter should be sup to 1")
+            print("get_fragments() step parameter should be sup to 1")
             step = 1
 
         new_data = []
@@ -134,15 +146,20 @@ class SeqClassCollection(UserList):
             sequence = seqRec.seq
  
             i = 0
+            j = 0
             while i < (len(sequence) - size + 1):
                 fragment = sequence[i:i + size]
 
-                frgRec = SeqRecord(fragment, id=seqRec.id+"_"+str(i))
+                frgRec = SeqRecord(fragment, id=seqRec.id + "_" + str(j))
                 frgRec.rankParent = ind
-                frgRec.seqParent = seqRec.id
+                frgRec.idParent = seqRec.id
                 frgRec.target = seqRec.target
+                frgRec.description = seqRec.description
+                frgRec.name = "{}.fragment_at_{}".format(seqRec.name, str(i))
+
                 new_data.append(frgRec)
                 i += step
+                j += 1
 
         return self.__class__(new_data)
 
@@ -155,6 +172,35 @@ class SeqClassCollection(UserList):
 
         return parents
 
+    def sample(self, size, seed=None):
+        random.seed(seed)
+
+        if size > len(self.data):
+            return self
+
+        else:
+            return self.__class__(random.sample(self, size))
+
+    def stratified_sample(self, sup_limit=25, inf_limit=5, seed=None):
+        random.seed(seed)
+
+        new_data_ind = []
+
+        for target in self.target_ind:
+            nb_seqs = len(self.target_ind[target])
+            the_limit = sup_limit
+    
+            if nb_seqs <= the_limit:
+                the_limit = nb_seqs
+    
+            if nb_seqs >= inf_limit:
+                new_data_ind.extend(random.sample(self.target_ind[target], the_limit))
+
+        return self[new_data_ind]
+
+    def write(self, fasta_file, class_file):
+       self.write_fasta(self.data, fasta_file)
+       self.write_classes(self.target_map, class_file)
 
 if __name__ == "__main__":
     cls_file = "../data/viruses/HBV/HBV_geo.csv"
@@ -175,4 +221,5 @@ if __name__ == "__main__":
     # print(seqs)
     # print(seqs.target_map)
     # print(type(seqs))
+
 
