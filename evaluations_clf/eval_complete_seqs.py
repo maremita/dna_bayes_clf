@@ -3,6 +3,7 @@
 import dna_bayes.evaluation as ev 
 from dna_bayes import seq_collection
 from dna_bayes import kmers
+from dna_bayes.utils import ndarrays_tolists
 
 from eval_classifiers import eval_clfs
 
@@ -16,12 +17,10 @@ from pprint import pprint
 from collections import defaultdict
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 from joblib import Parallel, delayed
 
-from sklearn.model_selection import cross_validate, cross_val_score
+from sklearn.model_selection import cross_validate
 from sklearn.model_selection import StratifiedKFold
 
 
@@ -42,16 +41,18 @@ def clf_cross_val(classifier, X, X_conc, y, scoring, cv_iter,
     skf = StratifiedKFold(n_splits=cv_iter, shuffle=True,
             random_state=random_state)
 
-    scores_tmp = clf_dscp, cross_val_score(clf, final_X, y, cv=skf,
-            scoring=scoring, fit_params=params)
+
+    scores_tmp = cross_validate(clf, final_X, y, scoring=scoring,
+            cv=skf, fit_params=params, return_train_score=False)
 
     if verbose: print("Evaluated: {}\r".format(clf_dscp), flush=True)
+    scores_tmp = ndarrays_tolists(scores_tmp)
 
-    return scores_tmp
+    return clf_dscp, scores_tmp
 
 
-def clfs_evaluation_mp(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
-        n_proc=4, random_state=None, verbose=False):
+def clfs_evaluation_mp(classifiers, X, X_b, y, cv_iter, scoring, n_proc=4,
+        random_state=None, verbose=False):
 
     X_conc = np.concatenate((X, X_b), axis=1)
  
@@ -62,12 +63,12 @@ def clfs_evaluation_mp(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
                 scoring, cv_iter, random_state, verbose)
             for clf_ind in classifiers)
 
-    scores = {clf_dscp:[cv_scores.mean(), cv_scores.std()] for clf_dscp, cv_scores in clf_cv_scores }
+    scores = {clf_dscp:cv_scores for clf_dscp, cv_scores in clf_cv_scores }
 
     return scores
 
 
-def clfs_evaluation(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
+def clfs_evaluation(classifiers, X, X_b, y, cv_iter, scoring,
         random_state=None, verbose=False):
 
     scores = dict()
@@ -86,28 +87,33 @@ def clfs_evaluation(classifiers, X, X_b, y, cv_iter, scoring="f1_weighted",
 
         skf = StratifiedKFold(n_splits=cv_iter, shuffle=True,
                 random_state=random_state)
-
-        scores_tmp = cross_val_score(classifier, final_X, y, cv=skf,
-                scoring=scoring, fit_params=params)
+        
+        # cross_validate returns a dict of float arrays of shape (n_splits,)
+        scores_tmp = cross_validate(classifier, final_X, y, scoring=scoring,
+                cv=skf, n_jobs=-1, fit_params=params, return_train_score=False)
 
         if verbose: print("Evaluated: {}\r".format(clf_dscp), flush=True)
 
-        scores[clf_dscp] = [scores_tmp.mean(), scores_tmp.std()]
+        scores[clf_dscp] = ndarrays_tolists(scores_tmp)
 
     return scores
 
 
 def k_evaluation(seq_file, cls_file, k_main_list, full_kmers,
-        cv_iter, scoring="f1_weighted", n_proc=4, random_state=None, verbose=True):
+        cv_iter, scoring, n_proc=4, random_state=None, verbose=True):
 
     k_scores = defaultdict(dict)
+    
+    if verbose: print("Dataset construction step", flush=True)
+
+    seq_cv = seq_collection.SeqClassCollection((seq_file, cls_file))
+
+    print("Counts of sequences")
+    pprint(seq_cv.get_count_targets())
 
     for k_main in k_main_list:
     
         if verbose: print("\nProcessing k_main={}".format(k_main), flush=True)
-        if verbose: print("Dataset construction step", flush=True)
-
-        seq_cv = seq_collection.SeqClassCollection((seq_file, cls_file))
  
         # # Data for cross validation
         seq_cv_kmers = ev.construct_kmers_data(seq_cv, k_main,
@@ -123,11 +129,11 @@ def k_evaluation(seq_file, cls_file, k_main_list, full_kmers,
 
         if n_proc == 0 :
             clf_scores = clfs_evaluation(classifiers, seq_cv_X,
-                    seq_cv_X_back, seq_cv_y, cv_iter, scoring=scoring, 
+                    seq_cv_X_back, seq_cv_y, cv_iter, scoring, 
                     random_state=random_state, verbose=verbose)
         else: 
             clf_scores = clfs_evaluation_mp(classifiers, seq_cv_X,
-                    seq_cv_X_back, seq_cv_y, cv_iter, scoring=scoring, 
+                    seq_cv_X_back, seq_cv_y, cv_iter, scoring, 
                     n_proc=n_proc, random_state=random_state, verbose=verbose)
 
         for clf_dscp in clf_scores:
@@ -135,43 +141,6 @@ def k_evaluation(seq_file, cls_file, k_main_list, full_kmers,
 
     return k_scores 
 
-
-def make_figure(scores, kList, jsonFile, verbose=True):
-    if verbose: print("\ngenerating a figure", flush=True)
-    
-    fig_file = os.path.splitext(jsonFile)[0] + ".png"
-    fig_title = os.path.splitext((os.path.basename(jsonFile)))[0]
-    
-    cmap = cm.get_cmap('tab20')
-    colors = [cmap(j/20) for j in range(0,20)] 
-
-    f, axs = plt.subplots(5, 4, figsize=(30,20))
-    axs = np.concatenate(axs)
-    #axs = list(zip(axs,clf_symbs))
-    width = 0.45
-
-    for ind, algo in enumerate(scores):
-        means = np.array([scores[algo][str(k)][0] for k in kList])
-        stds = np.array([scores[algo][str(k)][1] for k in kList])
-
-        axs[ind].fill_between(kList, means-stds, means+stds,
-                alpha=0.1, color=colors[ind])
-        axs[ind].plot(kList, means, color=colors[ind])
-
-        axs[ind].set_title(algo)
-        axs[ind].set_ylim([0, 1.1])
-        axs[ind].grid()
-        
-        if ind%4 == 0:
-            axs[ind].set_ylabel('F1 weighted')
-        if ind >= 16:
-            axs[ind].set_xlabel('K length')
-    
-        axs[ind].set_xticks([k for k in kList])
-
-    plt.suptitle(fig_title)
-    plt.savefig(fig_file)
-    plt.show()
 
 if __name__ == "__main__":
  
@@ -199,13 +168,14 @@ if __name__ == "__main__":
 
     k_main_list = list(range(s_klen, e_klen+1))
     fullKmers = False
+    eval_scores = ["recall_weighted", "precision_weighted", "f1_weighted"]
     rs = 0  # random_state
     verbose = True
 
-    if not os.path.isfile(scores_file):
-    #if True:
+    #if not os.path.isfile(scores_file):
+    if True:
         the_scores = k_evaluation(seq_file, cls_file, k_main_list,
-                fullKmers, cv_iter=cv_iter, scoring="f1_weighted",
+                fullKmers, cv_iter, eval_scores,
                 n_proc=4, random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out: 
@@ -214,4 +184,4 @@ if __name__ == "__main__":
     else:
        the_scores = json.load(open(scores_file, "r"))
 
-    #make_figure(the_scores, k_main_list, scores_file, verbose)
+    #pprint(the_scores)

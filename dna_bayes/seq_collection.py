@@ -134,10 +134,10 @@ class SeqClassCollection(UserList):
             for entry in classes:
                 fh.write(entry+","+classes[entry]+"\n")
 
-    def get_fragments(self, size, step=1):
+    def extract_fragments(self, size, step=1):
 
         if step < 1:
-            print("get_fragments() step parameter should be sup to 1")
+            print("extract_fragments() step parameter should be sup to 1")
             step = 1
 
         new_data = []
@@ -198,6 +198,12 @@ class SeqClassCollection(UserList):
                 new_data_ind.extend(random.sample(self.target_ind[target], the_limit))
 
         return self[new_data_ind]
+    
+    def get_count_targets(self):
+        count = {target:len(self.target_ind[target]) 
+                for target in self.target_ind}
+
+        return count
 
     def write(self, fasta_file, class_file):
        self.write_fasta(self.data, fasta_file)
