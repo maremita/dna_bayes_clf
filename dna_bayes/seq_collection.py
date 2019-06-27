@@ -156,6 +156,7 @@ class SeqClassCollection(UserList):
                 frgRec.target = seqRec.target
                 frgRec.description = seqRec.description
                 frgRec.name = "{}.fragment_at_{}".format(seqRec.name, str(i))
+                frgRec.position = i
 
                 new_data.append(frgRec)
                 i += step
