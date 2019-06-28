@@ -11,7 +11,8 @@ eval_clfs = {
             1: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-100), False, "BAY_MultinomNB_Alpha_1e-100"],
             2: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-10), False, "BAY_MultinomNB_Alpha_1e-10"],
             3: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-5), False, "BAY_MultinomNB_Alpha_1e-5"],
-            4: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), False, "BAY_MultinomNB_Alpha_1"]
+            4: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1e-2), False, "BAY_MultinomNB_Alpha_1e-2"],
+            5: [bayes.Bayesian_MultinomialNB(priors=priors, alpha=1), False, "BAY_MultinomNB_Alpha_1"]
             },
 
         "markov":{
@@ -19,19 +20,20 @@ eval_clfs = {
             1: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-100), True, "BAY_Markov_Alpha_1e-100"],
             2: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-10), True, "BAY_Markov_Alpha_1e-10"],
             3: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-5), True, "BAY_Markov_Alpha_1e-5"],
-            4: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1), True, "BAY_Markov_Alpha_1"]
+            4: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1e-2), True, "BAY_Markov_Alpha_1e-2"],
+            5: [bayes.Bayesian_MarkovModel(priors=priors, alpha=1), True, "BAY_Markov_Alpha_1"]
             },
 
         "lr":{
-            0:  [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l1", max_iter=1500), False, "SK_Ovr_LR_Liblinear_L1"],
-            1: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l2", max_iter=1500), False, "SK_Ovr_LR_Liblinear_L2"]
+            0:  [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l1", max_iter=2000), False, "SK_Ovr_LR_Liblinear_L1"],
+            1: [LogisticRegression(multi_class='ovr', solver='liblinear', penalty="l2", max_iter=2000), False, "SK_Ovr_LR_Liblinear_L2"]
             },
 
         "lsvm":{
-            0: [LinearSVC(penalty="l1", loss="squared_hinge", dual=False, max_iter=1500), False, "SK_LinearSVC_SquaredHinge_L1_Primal"],
-            1: [LinearSVC(penalty="l2", loss="hinge", dual=True, max_iter=1500), False, "SK_LinearSVC_Hinge_L2_Dual"],
-            2: [LinearSVC(penalty="l2", loss="squared_hinge", dual=True, max_iter=1500), False, "SK_LinearSVC_SquaredHinge_L2_Dual"],
-            3: [LinearSVC(penalty="l2", loss="squared_hinge", dual=False, max_iter=1500), False, "SK_LinearSVC_SquaredHinge_L2_Primal"]
+            0: [LinearSVC(penalty="l1", loss="squared_hinge", dual=False, max_iter=2000), False, "SK_LinearSVC_SquaredHinge_L1_Primal"],
+            1: [LinearSVC(penalty="l2", loss="hinge", dual=True, max_iter=2000), False, "SK_LinearSVC_Hinge_L2_Dual"],
+            2: [LinearSVC(penalty="l2", loss="squared_hinge", dual=True, max_iter=2000), False, "SK_LinearSVC_SquaredHinge_L2_Dual"],
+            3: [LinearSVC(penalty="l2", loss="squared_hinge", dual=False, max_iter=2000), False, "SK_LinearSVC_SquaredHinge_L2_Primal"]
             },
 
         "svm":{
