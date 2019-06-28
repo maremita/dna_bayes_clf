@@ -197,9 +197,9 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
     return final_scores
 
 
-def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
-        frgmt_size, frgmt_count,  nb_iter, scoring, n_proc,
-        random_state=None, verbose=True):
+def k_evaluation_with_fragments(seq_file, cls_file, classifiers,
+        k_main_list, full_kmers, frgmt_size, frgmt_count, nb_iter,
+        scoring, n_proc, random_state=None, verbose=True):
 
     k_scores = defaultdict(dict)
 
@@ -221,8 +221,6 @@ def k_evaluation_with_fragments(seq_file, cls_file, k_main_list, full_kmers,
     pprint(frgmts_cv.get_count_targets())
 
     frgmts_parents = frgmts_cv.get_parents_rank_list()
-
-    classifiers = eval_clfs
 
     for k_main in k_main_list:
         if verbose: print("\nProcessing k_main={}".format(k_main), flush=True)
@@ -247,8 +245,8 @@ if __name__ == "__main__":
     4 5 1000 5 4
     """
     
-    if len(sys.argv) != 10:
-        print("9 arguments are needed!")
+    if len(sys.argv) != 11:
+        print("10 arguments are needed!")
         sys.exit()
 
     print("RUN {}".format(sys.argv[0]), flush=True)
@@ -262,6 +260,7 @@ if __name__ == "__main__":
     fragment_count = int(sys.argv[7])
     nb_iter = int(sys.argv[8])
     n_proc = int(sys.argv[9])
+    clf_type = sys.argv[10]
 
     k_main_list = list(range(s_klen, e_klen+1))
     full_kmers = False
@@ -275,9 +274,9 @@ if __name__ == "__main__":
     #if not os.path.isfile(scores_file):
     if True:
         the_scores = k_evaluation_with_fragments(seq_file, cls_file,
-                k_main_list, full_kmers, fragment_size, fragment_count,
-                nb_iter, eval_scores, n_proc, random_state=rs,
-                verbose=True)
+                eval_clfs[clf_type], k_main_list, full_kmers,
+                fragment_size, fragment_count, nb_iter, eval_scores,
+                n_proc, random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out: 
             json.dump(the_scores, fh_out, indent=2)

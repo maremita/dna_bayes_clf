@@ -99,7 +99,7 @@ def clfs_evaluation(classifiers, X, X_b, y, cv_iter, scoring,
     return scores
 
 
-def k_evaluation(seq_file, cls_file, k_main_list, full_kmers,
+def k_evaluation(seq_file, cls_file, classifiers, k_main_list, full_kmers,
         cv_iter, scoring, n_proc=4, random_state=None, verbose=True):
 
     k_scores = defaultdict(dict)
@@ -124,8 +124,6 @@ def k_evaluation(seq_file, cls_file, k_main_list, full_kmers,
         seq_cv_back_kmers = ev.construct_kmers_data(seq_cv, k_main-1,
                 full_kmers=full_kmers)
         seq_cv_X_back = seq_cv_back_kmers.data
-
-        classifiers = eval_clfs
 
         if n_proc == 0 :
             clf_scores = clfs_evaluation(classifiers, seq_cv_X,
@@ -152,8 +150,8 @@ if __name__ == "__main__":
     4 5 4 4
     """
 
-    if len(sys.argv) != 8:
-        print("7 arguments are needed!")
+    if len(sys.argv) != 9:
+        print("8 arguments are needed!")
         sys.exit()
 
     print("RUN {}".format(sys.argv[0]), flush=True)
@@ -165,6 +163,7 @@ if __name__ == "__main__":
     e_klen=int(sys.argv[5])
     cv_iter = int(sys.argv[6])
     n_proc = int(sys.argv[7])
+    clf_type = sys.argv[8]
 
     k_main_list = list(range(s_klen, e_klen+1))
     fullKmers = False
@@ -174,8 +173,8 @@ if __name__ == "__main__":
 
     #if not os.path.isfile(scores_file):
     if True:
-        the_scores = k_evaluation(seq_file, cls_file, k_main_list,
-                fullKmers, cv_iter, eval_scores,
+        the_scores = k_evaluation(seq_file, cls_file, eval_clfs[clf_type],
+                k_main_list, fullKmers, cv_iter, eval_scores,
                 n_proc=4, random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out: 
