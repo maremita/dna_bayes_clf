@@ -5,13 +5,13 @@ from os.path import isfile, join
 import sys
 import json
 from collections import defaultdict
+from glob import glob
 
 
 if __name__ == "__main__":
     """
     merge_k_jsons.py 
     ~/Projects/Thesis/dna_bayes_clf/results/viruses/wcb_2019/graham/HIV01_FT_250 
-    HIV01_FT_250 
     ~/Projects/Thesis/dna_bayes_clf/results/viruses/wcb_2019/graham/HIV01_FT_250/HIV01_FT_250.json
     """
 
@@ -19,15 +19,22 @@ if __name__ == "__main__":
     final_scores = defaultdict(dict)
 
     my_path = sys.argv[1]
-    prefix = sys.argv[2]
-    output_file = sys.argv[3]
+    #prefix = sys.argv[2]
+    output_file = sys.argv[2]
 
     # Get files
-    files= [f for f in listdir(my_path) if isfile(join(my_path, f)) and 
-            f.endswith(".json") and f.startswith(prefix)]
+    #files= [f for f in listdir(my_path) if isfile(join(my_path, f)) and 
+    #        f.endswith(".json") and f.startswith(prefix)]
+
+    suffix = "*/*"
+    if my_path.endswith("/"):
+        suffix = "/*"
+
+    files = [f for f in  glob(my_path+suffix) if isfile(f) ]
 
     for one_file in files:
-        scores = json.load(open(join(my_path, one_file), "r"))
+        #scores = json.load(open(join(my_path, one_file), "r"))
+        scores = json.load(open(one_file, "r"))
 
         for clf_dscp in scores:
             for str_k in scores[clf_dscp]:
