@@ -12,9 +12,9 @@ if __name__ == "__main__":
     Command line:
 
     merge_k_jsons.py 
-    /Users/remita/Projects/Thesis/dna_bayes_clf/results/viruses/wcb_2019/graham/HIV01_FT_250 
-    ~/Projects/Thesis/dna_bayes_clf/results/viruses/wcb_2019/graham/HIV01_FT_250/HIV01_FT_250.json
-    
+    /Users/remita/Projects/Thesis/dna_bayes_clf/results/viruses/PR01/2019_06/HIV01_FT_250 
+    ~/Projects/Thesis/dna_bayes_clf/results/viruses/PR01/2019_06/HIV01_FT_250.json
+
     The path of input files needs to be absolute
 
     If the path does not end by a "/", the script add a */* to get all
