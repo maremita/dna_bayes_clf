@@ -16,7 +16,7 @@ import matplotlib.cm as cm
 algorithm = {"MultinomNB":"Multinomial Bayes", 
         "Markov":"Markov",
         "LinearSVC":"Linear SVM",
-        "SK_Ovr_LR":"Linear Regression" 
+        "SK_Ovr_LR":"Logistic Regression" 
         }
 
 model = { "MLE_MultinomNB":"MLE",
@@ -33,13 +33,13 @@ model = { "MLE_MultinomNB":"MLE",
         "BAY_Markov_Alpha_1e-2":"alpha=1e-2",
         "BAY_Markov_Alpha_1":"alpha=1",
 
-        "SK_Ovr_LR_Liblinear_L1":"L1",
-        "SK_Ovr_LR_Liblinear_L2":"L2",
+        "SK_Ovr_LR_Liblinear_L1":"LR_L1",
+        "SK_Ovr_LR_Liblinear_L2":"LR_L2",
 
-        "SK_LinearSVC_SquaredHinge_L1_Primal":"sqHinge_L1_primal",
+        "SK_LinearSVC_SquaredHinge_L1_Primal":"LSVM_L1",
         "SK_LinearSVC_Hinge_L2_Dual":"hinge_L2_dual",
         "SK_LinearSVC_SquaredHinge_L2_Dual":"sqHinge_L2_dual",
-        "SK_LinearSVC_SquaredHinge_L2_Primal":"sqHinge_L2_primal"
+        "SK_LinearSVC_SquaredHinge_L2_Primal":"LSVM_L2"
         }
 
 def compile_data(json_sc, clf_kwds, kList, metric):
@@ -49,10 +49,11 @@ def compile_data(json_sc, clf_kwds, kList, metric):
     for algo in json_sc:
         for kwd in clf_kwds: 
             if kwd in algo:
-                values =  [ np.array(json_sc[algo][str(k)][metric]) for k in kList ]
+                if algo not in ("SK_LinearSVC_Hinge_L2_Dual", "SK_LinearSVC_SquaredHinge_L2_Dual"):
+                    values =  [ np.array(json_sc[algo][str(k)][metric]) for k in kList ]
 
-                scores_tmp[kwd]["mean"][model[algo]] = np.array([ k.mean() for k in values ])
-                scores_tmp[kwd]["std"][model[algo]] = np.array([ k.std() for k in values ])
+                    scores_tmp[kwd]["mean"][model[algo]] = np.array([ k.mean() for k in values ])
+                    scores_tmp[kwd]["std"][model[algo]] = np.array([ k.std() for k in values ])
 
     #print(scores_tmp)
     for kwd in clf_kwds:
@@ -75,7 +76,7 @@ def make_figure(scores1, scores2, clf_kwds, kList, metric, fig_file):
     styles = ["o-","^-","s-","x-","h-","d-","<-",">-","*-","p-"]
     sizefont = 12
 
-    f, axs = plt.subplots(len(clf_kwds), 2, figsize=(15,8))
+    f, axs = plt.subplots(len(clf_kwds), 2, figsize=(15,10))
     axs = np.concatenate(axs)
 
     plt.rcParams.update({'font.size':sizefont})
@@ -88,11 +89,11 @@ def make_figure(scores1, scores2, clf_kwds, kList, metric, fig_file):
         h1 = scores1[algo_kwd]["mean"].plot(ax=axs[ind], style=styles, fontsize=sizefont)
         h2 = scores2[algo_kwd]["mean"].plot(ax=axs[ind+1], style=styles, fontsize=sizefont)
 
-        if ind >1:
+        if ind >5:
             h1.set_xlabel('k-mers length', fontsize=sizefont+1)
             h2.set_xlabel('k-mers length', fontsize=sizefont+1)
 
-        else:
+        if ind < 2:
             h1.set_title('Genotyping (HCVGENCG)')
             h2.set_title('Subtyping (HCVSUBCG)')
 
