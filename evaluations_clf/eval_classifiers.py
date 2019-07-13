@@ -2,6 +2,7 @@ from dna_bayes import bayes
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import LinearSVC, SVC
+from sklearn.neural_network import MLPClassifier
 
 priors="uniform"
 
@@ -41,11 +42,17 @@ eval_clfs = {
             1: [SVC(kernel="rbf", gamma="auto"), False, "SK_SVC_RBF"],
             2: [SVC(kernel="poly", gamma="auto"), False, "SK_SVC_Poly"],
             3: [SVC(kernel="sigmoid", gamma="auto"), False, "SK_SVC_Sigmoid"]
+            },
+
+        "mlr":{
+            #0:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="none", max_iter=2000), False, "MLR_None"],
+            1:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l1", max_iter=2000), False, "MLR_L1"],
+            2: [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l2", max_iter=2000), False, "MLR_L2"],
+            3: [LogisticRegression(multi_class='multinomial', solver='saga', penalty="elasticnet", l1_ratio=0.5, max_iter=2000), False, "MLR_Elasticnet"]
+            },
+
+        "mlp":{
+            0:  [MLPClassifier(), False, "SK_MLP"]
             }
         }
 
-
-        #5: [GaussianNB(), False, "SK_Gaussian_NB"],
-        ## 12: [LinearSVC(penalty="l1", loss="hinge"), False, "SK_LinearSVC_Hinge_L1"], # NOT supported
-        ##8:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l1", max_iter=1500), False, "SK_Multi_LR_Saga_L1"],
-        ##10: [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l2", max_iter=1500), False, "SK_Multi_LR_Saga_L2"],

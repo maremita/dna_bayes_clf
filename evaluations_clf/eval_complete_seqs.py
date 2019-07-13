@@ -20,6 +20,7 @@ import numpy as np
 
 from joblib import Parallel, delayed
 
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import cross_validate
 from sklearn.model_selection import StratifiedKFold
 
@@ -51,7 +52,7 @@ def clf_cross_val(classifier, X, X_conc, y, scoring, cv_iter,
     return clf_dscp, scores_tmp
 
 
-def clfs_evaluation_mp(classifiers, X, X_b, y, cv_iter, scoring, n_proc=4,
+def clfs_evaluation_mp(classifiers, X, X_b, y, cv_iter, scoring, n_proc,
         random_state=None, verbose=False):
 
     X_conc = np.concatenate((X, X_b), axis=1)
@@ -100,7 +101,7 @@ def clfs_evaluation(classifiers, X, X_b, y, cv_iter, scoring,
 
 
 def k_evaluation(seq_file, cls_file, classifiers, k_main_list, full_kmers,
-        cv_iter, scoring, n_proc=4, random_state=None, verbose=True):
+        cv_iter, scoring, n_proc, random_state=None, verbose=True):
 
     k_scores = defaultdict(dict)
     
@@ -114,16 +115,21 @@ def k_evaluation(seq_file, cls_file, classifiers, k_main_list, full_kmers,
     for k_main in k_main_list:
     
         if verbose: print("\nProcessing k_main={}".format(k_main), flush=True)
- 
+
+        # Min-max scaling initialization
+        minMaxScaler = MinMaxScaler(feature_range=(0, 1), copy = False)
+
         # # Data for cross validation
         seq_cv_kmers = ev.construct_kmers_data(seq_cv, k_main,
                 full_kmers=full_kmers)
         seq_cv_X = seq_cv_kmers.data
+        seq_cv_X = minMaxScaler.fit_transform(seq_cv_X)
         seq_cv_y = np.asarray(seq_cv.targets)
 
         seq_cv_back_kmers = ev.construct_kmers_data(seq_cv, k_main-1,
                 full_kmers=full_kmers)
         seq_cv_X_back = seq_cv_back_kmers.data
+        seq_cv_X_back = minMaxScaler.fit_transform(seq_cv_X_back)
 
         if n_proc == 0 :
             clf_scores = clfs_evaluation(classifiers, seq_cv_X,
@@ -132,7 +138,7 @@ def k_evaluation(seq_file, cls_file, classifiers, k_main_list, full_kmers,
         else: 
             clf_scores = clfs_evaluation_mp(classifiers, seq_cv_X,
                     seq_cv_X_back, seq_cv_y, cv_iter, scoring, 
-                    n_proc=n_proc, random_state=random_state, verbose=verbose)
+                    n_proc, random_state=random_state, verbose=verbose)
 
         for clf_dscp in clf_scores:
             k_scores[clf_dscp][str(k_main)] = clf_scores[clf_dscp]
@@ -175,7 +181,7 @@ if __name__ == "__main__":
     if True:
         the_scores = k_evaluation(seq_file, cls_file, eval_clfs[clf_type],
                 k_main_list, fullKmers, cv_iter, eval_scores,
-                n_proc=4, random_state=rs, verbose=True)
+                n_proc, random_state=rs, verbose=True)
 
         with open(scores_file ,"w") as fh_out: 
             json.dump(the_scores, fh_out, indent=2)

@@ -17,6 +17,7 @@ from pprint import pprint
 import numpy as np
 from joblib import Parallel, delayed
 
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import recall_score, precision_score, f1_score
@@ -134,9 +135,13 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
 
     if verbose: print("Validation step", flush=True)
  
+    # Min-max scaling initialization
+    minMaxScaler = MinMaxScaler(feature_range=(0, 1), copy = False)
+
     ## construct X and X_back dataset
     X_kmer = ev.construct_kmers_data(data_seqs, k, full_kmers=full_kmers)
     X = X_kmer.data
+    X = minMaxScaler.fit_transform(X)
     #print("X shape {}".format(X.shape))
     X_kmers_list = X_kmer.kmers_list
     y = np.asarray(data_seqs.targets)
@@ -145,13 +150,18 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
     X_kmer_back = ev.construct_kmers_data(data_seqs, k-1,
             full_kmers=full_kmers)
     X_back = X_kmer_back.data
+    X_back = minMaxScaler.fit_transform(X_back)
     #print("X_back shape {}".format(X_back.shape))
     X_back_list = X_kmer_back.kmers_list
 
     ## construct fragments dataset
     X_frgmts = kmers.GivenKmersCollection(fragments, X_kmers_list).data
+    X_frgmts = minMaxScaler.fit_transform(X_frgmts)
+
     #print("X_frgmts shape {}".format(X_frgmts.shape))
-    X_frgmts_back = kmers.GivenKmersCollection(fragments, X_back_list).data    
+    X_frgmts_back = kmers.GivenKmersCollection(fragments, X_back_list).data     
+    X_frgmts_back = minMaxScaler.fit_transform(X_frgmts_back)
+
     y_frgmts = np.asarray(fragments.targets)
     #print("X_frgmts_back shape {}".format(X_frgmts_back.shape))
     #print("y_frgmts shape {}".format(y_frgmts.shape))
