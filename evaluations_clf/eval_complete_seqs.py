@@ -104,7 +104,7 @@ def k_evaluation(seq_file, cls_file, classifiers, k_main_list, full_kmers,
         cv_iter, scoring, n_proc, random_state=None, verbose=True):
 
     k_scores = defaultdict(dict)
-    
+ 
     if verbose: print("Dataset construction step", flush=True)
 
     seq_cv = seq_collection.SeqClassCollection((seq_file, cls_file))
@@ -126,10 +126,17 @@ def k_evaluation(seq_file, cls_file, classifiers, k_main_list, full_kmers,
         seq_cv_X = minMaxScaler.fit_transform(seq_cv_X)
         seq_cv_y = np.asarray(seq_cv.targets)
 
-        seq_cv_back_kmers = ev.construct_kmers_data(seq_cv, k_main-1,
-                full_kmers=full_kmers)
-        seq_cv_X_back = seq_cv_back_kmers.data
-        seq_cv_X_back = minMaxScaler.fit_transform(seq_cv_X_back)
+        if ev.need_backoff(classifiers):
+            if verbose: print("\nCompute backoff kmers", flush=True)
+
+            seq_cv_back_kmers = ev.construct_kmers_data(seq_cv, k_main-1,
+                    full_kmers=full_kmers)
+            seq_cv_X_back = seq_cv_back_kmers.data
+            seq_cv_X_back = minMaxScaler.fit_transform(seq_cv_X_back)
+
+        else:
+            # no need to compute backoff kmers
+            seq_cv_X_back = np.zeros((seq_cv_X.shape[0], 1))
 
         if n_proc == 0 :
             clf_scores = clfs_evaluation(classifiers, seq_cv_X,

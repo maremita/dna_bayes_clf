@@ -101,6 +101,15 @@ def clfs_validation(classifiers, X, y, cv_iter, scoring="f1_weighted",
     return scores
 
 
+def need_backoff(classifiers):
+    for clf_ind in classifiers:
+        _, use_back, _ = classifiers[clf_ind]
+        if use_back:
+            return True
+
+    return False
+
+
 def make_figure(scores, kList, jsonFile, verbose=True):
     if verbose: print("\ngenerating a figure")
     

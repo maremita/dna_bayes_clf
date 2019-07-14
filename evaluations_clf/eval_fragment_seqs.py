@@ -138,7 +138,7 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
     # Min-max scaling initialization
     minMaxScaler = MinMaxScaler(feature_range=(0, 1), copy = False)
 
-    ## construct X and X_back dataset
+    ## Construct X
     X_kmer = ev.construct_kmers_data(data_seqs, k, full_kmers=full_kmers)
     X = X_kmer.data
     X = minMaxScaler.fit_transform(X)
@@ -146,25 +146,35 @@ def clf_evaluation_with_fragments(classifiers, data_seqs, fragments, parents,
     X_kmers_list = X_kmer.kmers_list
     y = np.asarray(data_seqs.targets)
 
-    # X_back
-    X_kmer_back = ev.construct_kmers_data(data_seqs, k-1,
-            full_kmers=full_kmers)
-    X_back = X_kmer_back.data
-    X_back = minMaxScaler.fit_transform(X_back)
-    #print("X_back shape {}".format(X_back.shape))
-    X_back_list = X_kmer_back.kmers_list
-
-    ## construct fragments dataset
+    ## Construct fragments dataset
     X_frgmts = kmers.GivenKmersCollection(fragments, X_kmers_list).data
     X_frgmts = minMaxScaler.fit_transform(X_frgmts)
-
-    #print("X_frgmts shape {}".format(X_frgmts.shape))
-    X_frgmts_back = kmers.GivenKmersCollection(fragments, X_back_list).data     
-    X_frgmts_back = minMaxScaler.fit_transform(X_frgmts_back)
-
     y_frgmts = np.asarray(fragments.targets)
-    #print("X_frgmts_back shape {}".format(X_frgmts_back.shape))
-    #print("y_frgmts shape {}".format(y_frgmts.shape))
+    
+    # Construct X_back and X_frgmts_back
+    if ev.need_backoff(classifiers):
+        if verbose: print("\nCompute backoff kmers", flush=True)
+
+        # X_back
+        X_kmer_back = ev.construct_kmers_data(data_seqs, k-1,
+                full_kmers=full_kmers)
+        X_back = X_kmer_back.data
+        X_back = minMaxScaler.fit_transform(X_back)
+        #print("X_back shape {}".format(X_back.shape))
+        X_back_list = X_kmer_back.kmers_list
+
+        # X_frgmts_back
+        #print("X_frgmts shape {}".format(X_frgmts.shape))
+        X_frgmts_back = kmers.GivenKmersCollection(fragments, X_back_list).data     
+        X_frgmts_back = minMaxScaler.fit_transform(X_frgmts_back)
+
+        #print("X_frgmts_back shape {}".format(X_frgmts_back.shape))
+        #print("y_frgmts shape {}".format(y_frgmts.shape))
+    
+    else:
+        # no need to compute backoff kmers
+        X_back = np.zeros((X.shape[0], 1))
+        X_frgmts_back = np.zeros((X_frgmts.shape[0], 1))
 
     seq_ind = list(i for i in range(0,len(data_seqs)))
     sss = StratifiedShuffleSplit(n_splits=nb_iter, test_size=0.2, random_state=random_state)
