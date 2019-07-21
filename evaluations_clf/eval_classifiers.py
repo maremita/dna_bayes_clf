@@ -51,6 +51,22 @@ eval_clfs = {
             3: [LogisticRegression(multi_class='multinomial', solver='saga', penalty="elasticnet", l1_ratio=0.5, max_iter=2000), False, "MLR_Elasticnet"]
             },
 
+        "mlr_none":{
+            0:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="none", max_iter=2000), False, "MLR_None"]
+            },
+
+        "mlr_l1":{
+            0:  [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l1", max_iter=2000), False, "MLR_L1"]
+            },
+ 
+        "mlr_l2":{
+            0: [LogisticRegression(multi_class='multinomial', solver='saga', penalty="l2", max_iter=2000), False, "MLR_L2"]
+            },
+ 
+        "mlr_net":{
+            0: [LogisticRegression(multi_class='multinomial', solver='saga', penalty="elasticnet", l1_ratio=0.5, max_iter=2000), False, "MLR_Elasticnet"]
+            },
+
         "mlp":{
             0:  [MLPClassifier(), False, "SK_MLP"]
             }
