@@ -11,7 +11,7 @@
 #### CG
 echo "CG"
 
-./extract_best_worst_k.py ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV01_CG.json ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV01_CG.json ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/bw_tables/HCV_CG_ALL_F1.tex MultinomNB:Markov:SK_Ovr_LR:LinearSVC test_f1_weighted 4:15
+./extract_best_worst_k.py ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV01_CG.json ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV02_CG.json ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/bw_tables/HCV_CG_ALL_F1.tex MultinomNB:Markov:SK_Ovr_LR:LinearSVC test_f1_weighted 4:15
 
 #### FT 100
 echo "FT_100"

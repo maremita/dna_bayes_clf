@@ -162,7 +162,7 @@ def write_couple_bw_scores(gen_scores, sub_scores, out_file):
 \toprule
  &   & \multicolumn{4}{c}{Genotyping}  & \multicolumn{4}{c}{Subtyping}  \\ \cmidrule(l){3-10}
  &   & \multicolumn{2}{l}{Best} & \multicolumn{2}{l}{Worst} & \multicolumn{2}{l}{Best} & \multicolumn{2}{l}{Worst} \\ \cmidrule(l){3-10}
- Algorithm & Model & F-measure & k lengths & F-measure  & k lengths  & F-measure & k lengths & F-measure & k lengths \\ \midrule
+ Classifier & Model & F-measure & k lengths & F-measure  & k lengths  & F-measure & k lengths & F-measure & k lengths \\ \midrule
     """ 
     
     footer = r"""
