@@ -4,6 +4,7 @@ import sys
 import json
 import os.path
 from collections import defaultdict
+from pprint import pprint
 
 import scipy.stats as st
 import numpy as np
@@ -66,13 +67,14 @@ def compile_data(json_sc, clf_kwds, kList, metric):
     return scores
 
 
-def make_figure(scores1, scores2, clf_kwds, kList, metric, fig_file):
-    
+def make_figure(scores1, scores2, clf_kwds, kList, metric, out_file):
+ 
+    fig_file = out_file+".png"
     fig_title = os.path.splitext((os.path.basename(fig_file)))[0]
  
     cmap = cm.get_cmap('tab20')
     colors = [cmap(j/20) for j in range(0,20)] 
-    
+ 
     styles = ["o-","^-","s-","x-","h-","d-","<-",">-","*-","p-"]
     sizefont = 12
 
@@ -135,8 +137,8 @@ if __name__ == "__main__":
 
     """
     ./make_typing_figure.py 
-    ~/Projects/Thesis/dna_bayes_clf/results/viruses/PR01/2019_06/HCV01_CG.json
-    ~/Projects/Thesis/dna_bayes_clf/results/viruses/PR01/2019_06/HCV02_CG.json 
+    ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV01_CG.json
+    ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV02_CG.json 
     test_plot.png 
     MultinomNB:Markov 
     test_f1_weighted 
@@ -145,7 +147,7 @@ if __name__ == "__main__":
 
     geno_file = sys.argv[1]
     subt_file = sys.argv[2]
-    figure_file = sys.argv[3]
+    output_file = sys.argv[3]
     clf_keyword = sys.argv[4]
     metric = sys.argv[5]
     str_k_list = sys.argv[6]
@@ -174,5 +176,10 @@ if __name__ == "__main__":
     geno_scores = compile_data(geno_json, clfs_list, k_main_list, metric)
     subt_scores = compile_data(subt_json, clfs_list, k_main_list, metric)
 
-    make_figure(geno_scores, subt_scores, clfs_list, k_main_list, metric, figure_file)
+    make_figure(geno_scores, subt_scores, clfs_list, k_main_list, metric, output_file)
 
+    with open(output_file+".txt", "w") as fh:
+        fh.write("Genotype results: \n\n")
+        pprint(geno_scores, fh)
+        fh.write("\nSubtype results: \n\n")
+        pprint(subt_scores, fh)
