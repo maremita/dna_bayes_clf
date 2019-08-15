@@ -139,7 +139,7 @@ if __name__ == "__main__":
     ./make_typing_figure.py 
     ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV01_CG.json
     ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV02_CG.json 
-    test_plot.png 
+    test_plot 
     MultinomNB:Markov 
     test_f1_weighted 
     4:15
