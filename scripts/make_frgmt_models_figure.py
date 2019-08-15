@@ -165,8 +165,6 @@ if __name__ == "__main__":
     4:15
     """
 
-    # ~/Projects/Thesis/Software/dna_bayes_clf/results/viruses/PR01/2019_06/HCV02_CG.json 
-
     input_dir = sys.argv[1]
     virus = sys.argv[2]
     output_file = sys.argv[3]
@@ -202,15 +200,10 @@ if __name__ == "__main__":
 
     scores = {f:compile_data(j, clfs_list, k_main_list, metric) for f, j
             in zip(fragments, json_data)}
-
-    #pprint(scores)
     
     frgmt_scores = compile_frgmt_data(scores, models)
-    
+ 
     make_figure(frgmt_scores, models, k_main_list, output_file)
 
-    #with open(output_file+".txt", "w") as fh:
-    #    fh.write("Genotype results: \n\n")
-    #    pprint(geno_scores, fh)
-    #    fh.write("\nSubtype results: \n\n")
-    #    pprint(subt_scores, fh)
+    with open(output_file+".txt", "w") as fh:
+        pprint(frgmt_scores, fh)
