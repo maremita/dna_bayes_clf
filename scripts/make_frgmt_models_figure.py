@@ -97,7 +97,11 @@ def compile_frgmt_data(score_dict, the_models):
 
 def make_figure(scores, the_models, kList, out_file):
  
-    fig_file = out_file+".png"
+    #fig_format = "png"
+    fig_format = "eps"
+    fig_dpi = 150
+
+    fig_file = out_file+"."+fig_format
     fig_title = os.path.splitext((os.path.basename(fig_file)))[0]
  
     cmap = cm.get_cmap('tab20')
@@ -123,11 +127,13 @@ def make_figure(scores, the_models, kList, out_file):
         for j, model in enumerate(scores[classifier]):
             p = scores[classifier][model]["mean"].plot(ax=axs[j+ind], style=styles, fontsize=sizefont)
 
+            p.set_rasterization_zorder(0)
+
             for frgmt in scores[classifier][model]["mean"]:
                 m = scores[classifier][model]["mean"][frgmt]
                 s = scores[classifier][model]["std"][frgmt]
 
-                p.fill_between(kList, m-s, m+s, alpha=0.1)
+                p.fill_between(kList, m-s, m+s, alpha=0.1, zorder=-1)
 
             p.set_title(model)
             p.set_xticks([k for k in kList])
@@ -151,7 +157,8 @@ def make_figure(scores, the_models, kList, out_file):
         ind +=2
     
     #plt.suptitle(fig_title)
-    plt.savefig(fig_file, bbox_inches="tight")
+    plt.savefig(fig_file, bbox_inches="tight", 
+            format=fig_format, dpi=fig_dpi)
 
 
 if __name__ == "__main__":

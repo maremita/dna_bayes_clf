@@ -69,7 +69,11 @@ def compile_data(json_sc, clf_kwds, kList, metric):
 
 def make_figure(scores1, scores2, clf_kwds, kList, metric, out_file):
  
-    fig_file = out_file+".png"
+    #fig_format = "png"
+    fig_format = "eps"
+    fig_dpi = 150
+
+    fig_file = out_file+"."+fig_format
     fig_title = os.path.splitext((os.path.basename(fig_file)))[0]
  
     cmap = cm.get_cmap('tab20')
@@ -78,7 +82,7 @@ def make_figure(scores1, scores2, clf_kwds, kList, metric, out_file):
     styles = ["o-","^-","s-","x-","h-","d-","<-",">-","*-","p-"]
     sizefont = 12
 
-    f, axs = plt.subplots(len(clf_kwds), 2, figsize=(15,10))
+    f, axs = plt.subplots(len(clf_kwds), 2, figsize=(15,8))
     axs = np.concatenate(axs)
 
     plt.rcParams.update({'font.size':sizefont})
@@ -91,7 +95,11 @@ def make_figure(scores1, scores2, clf_kwds, kList, metric, out_file):
         h1 = scores1[algo_kwd]["mean"].plot(ax=axs[ind], style=styles, fontsize=sizefont)
         h2 = scores2[algo_kwd]["mean"].plot(ax=axs[ind+1], style=styles, fontsize=sizefont)
 
-        if ind >5:
+        # For ESP transparent rendering
+        h1.set_rasterization_zorder(0)
+        h2.set_rasterization_zorder(0)
+
+        if ind > 1:
             h1.set_xlabel('k-mers length', fontsize=sizefont+1)
             h2.set_xlabel('k-mers length', fontsize=sizefont+1)
 
@@ -111,26 +119,32 @@ def make_figure(scores1, scores2, clf_kwds, kList, metric, out_file):
         h2.set_ylim([0, 1.1])
         
         h1.get_legend().remove()
-        h2.legend(loc='upper left', fancybox=True, shadow=True, bbox_to_anchor=(1.01, 1.02))
+ 
+        if ind < 2 or len(scores1) > 2:
+            h2.legend(loc='upper left', fancybox=True, shadow=True, 
+                    bbox_to_anchor=(1.01, 1.02))
+        else:
+            h2.get_legend().remove()
 
         for algo in scores1[algo_kwd]["mean"]:
             m = scores1[algo_kwd]["mean"][algo]
             s = scores1[algo_kwd]["std"][algo]
 
-            h1.fill_between(kList, m-s, m+s, alpha=0.1)
+            h1.fill_between(kList, m-s, m+s, alpha=0.1, zorder=-1)
 
             m = scores2[algo_kwd]["mean"][algo]
             s = scores2[algo_kwd]["std"][algo]
 
-            h2.fill_between(kList, m-s, m+s, alpha=0.1)
+            h2.fill_between(kList, m-s, m+s, alpha=0.1, zorder=-1)
 
         h1.grid()
         h2.grid()
- 
+
         ind +=2
     
     #plt.suptitle(fig_title)
-    plt.savefig(fig_file, bbox_inches="tight")
+    plt.savefig(fig_file, bbox_inches="tight", 
+            format=fig_format, dpi=fig_dpi)
 
 
 if __name__ == "__main__":
